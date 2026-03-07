@@ -35,6 +35,12 @@ hool init
 hool status
 ```
 
+Update to the latest version:
+
+```bash
+npm update -g hool-cli
+```
+
 ## Documentation
 
 Full documentation: [github.com/the-wise-agents/hool](https://github.com/the-wise-agents/hool)

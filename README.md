@@ -149,6 +149,12 @@ hool init
 hool status
 ```
 
+Update to the latest version:
+
+```bash
+npm update -g hool-cli
+```
+
 ## Repository Structure
 
 ```
