@@ -8,11 +8,14 @@ export interface McpDefinition {
   configEntry: Record<string, unknown>;
 }
 
+export type ExecutionMode = 'interactive' | 'full-hool';
+
 export interface AdapterConfig {
   platform: AgentPlatform;
   projectType: ProjectType;
   projectDir: string;
   promptsDir: string;
+  mode: ExecutionMode;
 }
 
 export interface Adapter {

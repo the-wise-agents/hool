@@ -6,7 +6,8 @@ import chalk from 'chalk';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
-import { scaffoldProject, copyPrompts, writeMcpManifest, writeAgentManifest, type ExecutionMode } from './core/scaffold.js';
+import { scaffoldProject, copyPrompts, writeMcpManifest, writeAgentManifest } from './core/scaffold.js';
+import type { ExecutionMode } from './adapters/types.js';
 import { createAdapter } from './adapters/index.js';
 import { checkAndInstallMcps } from './mcps/installer.js';
 import { getRequiredMcpNames } from './mcps/registry.js';
@@ -35,7 +36,7 @@ const program = new Command();
 program
   .name('hool')
   .description('Agent-Driven SDLC — scaffold and configure HOOL for any project')
-  .version('0.1.0');
+  .version('0.1.1');
 
 // ── hool init ──────────────────────────────────────────────
 
@@ -92,6 +93,7 @@ program
       projectType,
       projectDir,
       promptsDir,
+      mode,
     };
 
     // 4. Scaffold project structure
@@ -220,6 +222,56 @@ program
     }
 
     console.log(chalk.green('\n  ✓ Operations and memory reset. Phase docs preserved.\n'));
+  });
+
+// ── hool mode ─────────────────────────────────────────────
+
+program
+  .command('mode')
+  .description('Show or switch execution mode (interactive / full-hool)')
+  .argument('[new-mode]', 'New mode to switch to (interactive or full-hool)')
+  .option('-d, --dir <path>', 'Project directory', '.')
+  .action(async (newMode: string | undefined, opts: { dir: string }) => {
+    const projectDir = path.resolve(opts.dir);
+
+    const profilePath = path.join(projectDir, 'phases/00-init/project-profile.md');
+    const phasePath = path.join(projectDir, 'operations/current-phase.md');
+
+    try {
+      let profile = await fs.readFile(profilePath, 'utf-8');
+      const currentMode = profile.match(/\*\*Mode\*\*:\s*(\S+)/)?.[1] || 'unknown';
+
+      if (!newMode) {
+        console.log(chalk.bold(`\n  Current mode: ${currentMode}\n`));
+        return;
+      }
+
+      if (newMode !== 'interactive' && newMode !== 'full-hool') {
+        console.log(chalk.red(`\n  Invalid mode: ${newMode}. Use "interactive" or "full-hool".\n`));
+        return;
+      }
+
+      if (newMode === currentMode) {
+        console.log(chalk.dim(`\n  Already in ${currentMode} mode.\n`));
+        return;
+      }
+
+      // Update project-profile.md
+      profile = profile.replace(/(\*\*Mode\*\*:\s*)\S+/, `$1${newMode}`);
+      await fs.writeFile(profilePath, profile, 'utf-8');
+
+      // Update current-phase.md
+      try {
+        let phase = await fs.readFile(phasePath, 'utf-8');
+        phase = phase.replace(/(\*\*Mode\*\*:\s*)\S+/, `$1${newMode}`);
+        await fs.writeFile(phasePath, phase, 'utf-8');
+      } catch { /* current-phase.md might not have mode yet */ }
+
+      console.log(chalk.green(`\n  Mode switched: ${currentMode} -> ${newMode}`));
+      console.log(chalk.dim(`  Updated: project-profile.md, current-phase.md\n`));
+    } catch {
+      console.log(chalk.red('\n  Not a HOOL project. Run `hool init` first.\n'));
+    }
   });
 
 program.parse();

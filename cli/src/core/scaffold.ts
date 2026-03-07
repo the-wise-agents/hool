@@ -1,6 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import type { ProjectType } from '../adapters/types.js';
+import type { ProjectType, ExecutionMode } from '../adapters/types.js';
 import { getOperationTemplates, getMemoryHeaders } from './templates.js';
 import { MCP_REGISTRY } from '../mcps/registry.js';
 
@@ -40,8 +40,6 @@ const SKIP_PHASES: Record<ProjectType, string[]> = {
   'other': [],
 };
 
-export type ExecutionMode = 'interactive' | 'full-hool';
-
 export async function scaffoldProject(projectDir: string, projectType: ProjectType, mode: ExecutionMode = 'interactive'): Promise<void> {
   const skip = SKIP_PHASES[projectType] || [];
 
@@ -60,7 +58,7 @@ export async function scaffoldProject(projectDir: string, projectType: ProjectTy
 
   // Create operations directory with templates
   await fs.mkdir(path.join(projectDir, 'operations'), { recursive: true });
-  const opTemplates = getOperationTemplates();
+  const opTemplates = getOperationTemplates(mode);
   for (const [filename, content] of Object.entries(opTemplates)) {
     await fs.writeFile(path.join(projectDir, 'operations', filename), content, 'utf-8');
   }

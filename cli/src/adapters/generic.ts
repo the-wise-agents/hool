@@ -35,6 +35,15 @@ ${config.projectType === 'web-app' || config.projectType === 'browser-game' || c
   }
 
 See .hool/mcps.json for the full manifest.
+
+## Execution Mode: ${config.mode}
+
+${config.mode === 'full-hool'
+    ? `This project runs in **full-hool mode**. After brainstorming (Phase 1), the agent is fully autonomous.
+Do NOT ask the user for approval at spec, design, or architecture gates.
+Log all significant decisions to \`operations/needs-human-review.md\` for post-build review.`
+    : `This project runs in **interactive mode**. Phases 0-4 require human review and sign-off.
+Phase 4 (Architecture) is the FINAL human gate. After that, the agent runs autonomously.`}
 `;
 }
 

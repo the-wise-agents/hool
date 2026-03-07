@@ -1,6 +1,6 @@
-export function getOperationTemplates(): Record<string, string> {
+export function getOperationTemplates(mode: string = 'interactive'): Record<string, string> {
   return {
-    'current-phase.md': `# Current Phase\n\n## Current Phase: 0 (Project Init)\nAwaiting start.\n`,
+    'current-phase.md': `# Current Phase\n\n- **Mode**: ${mode}\n- **Phase**: 0 (Project Init)\n\nAwaiting start.\n`,
 
     'task-board.md': `# Task Board\n\n## Active Tasks\n_No tasks yet._\n\n## Completed Tasks\n_None._\n`,
 

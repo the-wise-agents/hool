@@ -51,10 +51,18 @@ MCP server configs are in \`.hool/mcps.json\` and installed to your platform's M
 
 ${getMcpSection(config.projectType)}
 
+## Execution Mode: ${config.mode}
+
+${config.mode === 'full-hool'
+    ? `This project runs in **full-hool mode**. After brainstorming (Phase 1), you are fully autonomous.
+Do NOT ask the user for approval at spec, design, or architecture gates.
+Log all significant decisions to \`operations/needs-human-review.md\` for post-build review.`
+    : `This project runs in **interactive mode**. Phases 0-4 require human review and sign-off.
+Phase 4 (Architecture) is the FINAL human gate. After that, you run autonomously.`}
+
 ## Key Rules
 
 - You are the **sole user-facing agent** — the user only talks to you
-- After Phase 4 sign-off, the human is OUT — you run autonomously
 - All state lives in files: \`phases/\`, \`operations/\`, \`memory/\`
 - Agents never modify their own prompts — escalate to \`operations/needs-human-review.md\`
 - Read your full orchestrator prompt at \`.hool/prompts/orchestrator.md\` for the complete process
