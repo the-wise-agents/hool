@@ -14,11 +14,12 @@ import type { ProjectType, AgentPlatform, AdapterConfig } from './adapters/types
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Prompts source: resolve from CLI to hool-mini/prompts/
+// Prompts source: check bundled (npm install), then monorepo dev paths
 async function getPromptsSourceDir(): Promise<string> {
   const candidates = [
+    path.resolve(__dirname, '..', 'prompts'),  // npm: cli/dist/ -> cli/prompts/ (bundled)
     path.resolve(__dirname, '..', '..', 'hool-mini', 'prompts'),  // dev: cli/src/ -> hool/hool-mini/prompts/
-    path.resolve(__dirname, '..', '..', '..', 'hool-mini', 'prompts'),  // dist: cli/dist/ -> hool/hool-mini/prompts/
+    path.resolve(__dirname, '..', '..', '..', 'hool-mini', 'prompts'),  // dev: cli/dist/ -> hool/hool-mini/prompts/
   ];
   for (const dir of candidates) {
     try {
