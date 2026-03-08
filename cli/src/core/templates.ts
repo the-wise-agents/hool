@@ -11,6 +11,12 @@ export function getOperationTemplates(mode: string = 'interactive'): Record<stri
     'inconsistencies.md': `# Inconsistencies\n\n_No inconsistencies found yet._\n`,
 
     'needs-human-review.md': `# Needs Human Review\n\n_Nothing pending human review._\n`,
+
+    'client-preferences.md': `# Client Preferences\n\nUser tech and product preferences captured during the project. Every agent honours these.\n\n## Tech Preferences\n_None yet._\n\n## Product Constraints\n_None yet._\n\n## Integrations\n_None yet._\n`,
+
+    'governor-rules.md': `# Governor Rules\n\nHard rules enforced by the Governor agent. Agents self-enforce; Governor audits.\n\n## Critical (must never happen even once)\n- [CRITICAL] No agent may modify its own prompt files (.hool/prompts/)\n- [CRITICAL] Product Lead must NEVER edit application code (src/, tests/) directly — always dispatch\n- [CRITICAL] No agent may remove or overwrite entries in governor-rules.md\n\n## High\n- [HIGH] All agents must load operations/client-preferences.md and honour user preferences\n- [HIGH] Product Lead must write a dispatch brief to operations/context/ before dispatching any agent\n- [HIGH] No task is too small for agent dispatch — even one-line changes go through the assigned agent\n\n## Medium\n- [MEDIUM] Agents must review best-practices.md and governor-feedback.md before submitting work\n- [MEDIUM] All file edits must be within the agent's declared writable paths\n`,
+
+    'governor-log.md': `# Governor Log\n\n_No audits yet._\n`,
   };
 }
 
@@ -66,6 +72,12 @@ _No inconsistencies found yet. Onboarding will populate this._
 
 _Onboarding will add the inferred spec here for review._
 `,
+
+    'client-preferences.md': `# Client Preferences\n\nUser tech and product preferences captured during the project. Every agent honours these.\n\n## Tech Preferences\n_None yet._\n\n## Product Constraints\n_None yet._\n\n## Integrations\n_None yet._\n`,
+
+    'governor-rules.md': `# Governor Rules\n\nHard rules enforced by the Governor agent. Agents self-enforce; Governor audits.\n\n## Critical (must never happen even once)\n- [CRITICAL] No agent may modify its own prompt files (.hool/prompts/)\n- [CRITICAL] Product Lead must NEVER edit application code (src/, tests/) directly — always dispatch\n- [CRITICAL] No agent may remove or overwrite entries in governor-rules.md\n\n## High\n- [HIGH] All agents must load operations/client-preferences.md and honour user preferences\n- [HIGH] Product Lead must write a dispatch brief to operations/context/ before dispatching any agent\n- [HIGH] No task is too small for agent dispatch — even one-line changes go through the assigned agent\n\n## Medium\n- [MEDIUM] Agents must review best-practices.md and governor-feedback.md before submitting work\n- [MEDIUM] All file edits must be within the agent's declared writable paths\n`,
+
+    'governor-log.md': `# Governor Log\n\n_No audits yet._\n`,
   };
 }
 
@@ -109,5 +121,7 @@ export function getMemoryHeaders(): Record<string, string> {
     'best-practices.md': `# Best Practices\n\n_No patterns or gotchas logged yet._\n`,
 
     'issues.md': `# Personal Issues Log\n\n_No issues logged yet._\n`,
+
+    'governor-feedback.md': `# Governor Feedback\n\n_No feedback yet._\n`,
   };
 }

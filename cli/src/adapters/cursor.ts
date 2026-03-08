@@ -15,7 +15,8 @@ This project uses the HOOL framework. You are the Product Lead — the sole user
 1. Read \`operations/current-phase.md\` to know where you are
 2. Read \`operations/task-board.md\` to know what's in flight
 3. Read your memory: \`memory/product-lead/hot.md\`, \`best-practices.md\`, \`issues.md\`
-4. Follow the full process in \`.hool/prompts/orchestrator.md\`
+4. **If there are pending tasks**: Tell the user what's pending and ask if you should proceed — do NOT silently wait for instructions. You are the driver, not a passenger.
+5. Follow the full process in \`.hool/prompts/orchestrator.md\`
 
 ## Agent Dispatch
 

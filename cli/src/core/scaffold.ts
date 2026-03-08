@@ -12,6 +12,7 @@ const AGENTS = [
   'be-dev',
   'qa',
   'forensic',
+  'governor',
 ] as const;
 
 const PHASE_DIRS = [
@@ -58,6 +59,8 @@ export async function scaffoldProject(projectDir: string, projectType: ProjectTy
 
   // Create operations directory with templates
   await fs.mkdir(path.join(projectDir, 'operations'), { recursive: true });
+  await fs.mkdir(path.join(projectDir, 'operations/context'), { recursive: true });
+  await fs.mkdir(path.join(projectDir, 'operations/dispatch'), { recursive: true });
   const opTemplates = getOperationTemplates(mode);
   for (const [filename, content] of Object.entries(opTemplates)) {
     await fs.writeFile(path.join(projectDir, 'operations', filename), content, 'utf-8');
@@ -99,6 +102,8 @@ export async function scaffoldOnboard(projectDir: string, projectType: ProjectTy
 
   // Create operations directory with onboard-specific templates
   await fs.mkdir(path.join(projectDir, 'operations'), { recursive: true });
+  await fs.mkdir(path.join(projectDir, 'operations/context'), { recursive: true });
+  await fs.mkdir(path.join(projectDir, 'operations/dispatch'), { recursive: true });
   const opTemplates = getOnboardOperationTemplates(mode);
   for (const [filename, content] of Object.entries(opTemplates)) {
     await fs.writeFile(path.join(projectDir, 'operations', filename), content, 'utf-8');
@@ -232,6 +237,13 @@ const AGENT_MANIFEST = [
     prompt: '.hool/prompts/agents/11-forensic.md',
     memory: 'memory/forensic/',
     phases: [11],
+  },
+  {
+    name: 'governor',
+    role: 'Behavioral auditor, rule enforcement, corrective feedback',
+    prompt: '.hool/prompts/agents/governor.md',
+    memory: 'memory/governor/',
+    phases: 'continuous',
   },
 ];
 

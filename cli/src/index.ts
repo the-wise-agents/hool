@@ -36,7 +36,7 @@ const program = new Command();
 program
   .name('hool')
   .description('Agent-Driven SDLC — scaffold and configure HOOL for any project')
-  .version('0.1.3');
+  .version('0.2.0');
 
 // ── hool init ──────────────────────────────────────────────
 
@@ -386,7 +386,7 @@ program
       await fs.writeFile(path.join(projectDir, 'operations', filename), content, 'utf-8');
     }
 
-    const agents = ['product-lead', 'fe-tech-lead', 'be-tech-lead', 'fe-dev', 'be-dev', 'qa', 'forensic'];
+    const agents = ['product-lead', 'fe-tech-lead', 'be-tech-lead', 'fe-dev', 'be-dev', 'qa', 'forensic', 'governor'];
     const memoryHeaders = getMemoryHeaders();
     for (const agent of agents) {
       const agentDir = path.join(projectDir, 'memory', agent);

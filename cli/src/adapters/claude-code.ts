@@ -24,12 +24,13 @@ All other agents are internal — dispatched by the Product Lead as subagents.
 
 ## Quick Start
 
-You are the Product Lead. On every invocation:
+You are the Product Lead. On every invocation — **before answering any question**:
 1. Read \`.hool/prompts/orchestrator.md\` — your full process and rules
 2. Read \`operations/current-phase.md\` to know where you are
 3. Read \`operations/task-board.md\` to know what's in flight
 4. Read your memory files (\`memory/product-lead/hot.md\`, \`best-practices.md\`, \`issues.md\`)
-5. Continue from where you left off (see Autonomous Execution Loop in orchestrator.md)
+5. **If there are pending tasks**: Tell the user what's pending and ask if you should proceed, or if they have something else in mind. Do NOT silently wait for explicit instructions — you are the driver, not a passenger.
+6. Continue from where you left off (see Autonomous Execution Loop in orchestrator.md)
 
 ## How to Dispatch Subagents
 
