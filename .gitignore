@@ -18,3 +18,9 @@ Thumbs.db
 
 # Test artifacts
 temp/
+
+# HOOL runtime state (generated per-project, not source)
+.hool/
+memory/
+operations/
+phases/

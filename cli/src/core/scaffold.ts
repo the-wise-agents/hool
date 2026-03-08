@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import type { ProjectType, ExecutionMode } from '../adapters/types.js';
-import { getOperationTemplates, getMemoryHeaders } from './templates.js';
+import { getOperationTemplates, getOnboardOperationTemplates, getMemoryHeaders } from './templates.js';
 import { MCP_REGISTRY } from '../mcps/registry.js';
 
 const AGENTS = [
@@ -79,6 +79,43 @@ export async function scaffoldProject(projectDir: string, projectType: ProjectTy
   // NOTE: src/, tests/, logs/ are NOT created here.
   // Those are project concerns decided during architecture (Phase 4)
   // and scaffolded by Tech Leads during Phases 5-6 (LLD).
+}
+
+export async function scaffoldOnboard(projectDir: string, projectType: ProjectType, mode: ExecutionMode = 'interactive'): Promise<void> {
+  const skip = SKIP_PHASES[projectType] || [];
+
+  // Create phase directories (same as init — agents populate during onboarding)
+  for (const dir of PHASE_DIRS) {
+    if (skip.some(s => dir.startsWith(s))) continue;
+    await fs.mkdir(path.join(projectDir, dir), { recursive: true });
+  }
+
+  // Project profile marks this as an onboarded project
+  await fs.writeFile(
+    path.join(projectDir, 'phases/00-init/project-profile.md'),
+    `# Project Profile\n\n- **Type**: ${projectType}\n- **Mode**: ${mode}\n- **Origin**: onboarded (existing codebase)\n- **Created**: ${new Date().toISOString().split('T')[0]}\n`,
+    'utf-8',
+  );
+
+  // Create operations directory with onboard-specific templates
+  await fs.mkdir(path.join(projectDir, 'operations'), { recursive: true });
+  const opTemplates = getOnboardOperationTemplates(mode);
+  for (const [filename, content] of Object.entries(opTemplates)) {
+    await fs.writeFile(path.join(projectDir, 'operations', filename), content, 'utf-8');
+  }
+
+  // Create memory directories for each agent
+  const memoryHeaders = getMemoryHeaders();
+  for (const agent of AGENTS) {
+    const agentDir = path.join(projectDir, 'memory', agent);
+    await fs.mkdir(agentDir, { recursive: true });
+    for (const [filename, content] of Object.entries(memoryHeaders)) {
+      await fs.writeFile(path.join(agentDir, filename), content, 'utf-8');
+    }
+  }
+
+  // Create .hool directory
+  await fs.mkdir(path.join(projectDir, '.hool/prompts'), { recursive: true });
 }
 
 export async function copyPrompts(projectDir: string, promptsSourceDir: string): Promise<void> {

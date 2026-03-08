@@ -6,7 +6,7 @@ import chalk from 'chalk';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
-import { scaffoldProject, copyPrompts, writeMcpManifest, writeAgentManifest } from './core/scaffold.js';
+import { scaffoldProject, scaffoldOnboard, copyPrompts, writeMcpManifest, writeAgentManifest } from './core/scaffold.js';
 import type { ExecutionMode } from './adapters/types.js';
 import { createAdapter } from './adapters/index.js';
 import { checkAndInstallMcps } from './mcps/installer.js';
@@ -36,7 +36,7 @@ const program = new Command();
 program
   .name('hool')
   .description('Agent-Driven SDLC — scaffold and configure HOOL for any project')
-  .version('0.1.1');
+  .version('0.1.2');
 
 // ── hool init ──────────────────────────────────────────────
 
@@ -145,6 +145,151 @@ program
     console.log(chalk.dim(`  Mode: ${mode}`));
     console.log(chalk.dim(`  MCPs: ${requiredMcps.join(', ')}`));
     console.log(adapter.getCompletionMessage(config));
+    console.log('');
+  });
+
+// ── hool onboard ──────────────────────────────────────────
+
+program
+  .command('onboard')
+  .description('Onboard an existing codebase into HOOL (reverse-engineer phase docs)')
+  .option('-d, --dir <path>', 'Project directory', '.')
+  .option('-p, --platform <platform>', 'Platform (claude-code, cursor, generic)')
+  .option('-t, --type <type>', 'Project type (web-app, browser-game, mobile-android, animation, cli-tool, api-only, desktop, other)')
+  .option('-m, --mode <mode>', 'Execution mode (interactive, full-hool)')
+  .action(async (opts) => {
+    const projectDir = path.resolve(opts.dir);
+
+    console.log(chalk.bold('\n  HOOL — Onboard Existing Project\n'));
+
+    // Check if already a HOOL project
+    try {
+      await fs.access(path.join(projectDir, '.hool'));
+      console.log(chalk.red('  This directory already has a .hool/ folder. Use `hool init` for new projects or `hool reset` to start fresh.\n'));
+      return;
+    } catch { /* not initialized — good */ }
+
+    // 1. Ask platform (or use flag)
+    const platform: AgentPlatform = opts.platform || await select<AgentPlatform>({
+      message: 'Which AI coding tool are you using?',
+      choices: [
+        { name: 'Claude Code', value: 'claude-code' },
+        { name: 'Cursor', value: 'cursor' },
+        { name: 'Other / generic', value: 'generic' },
+      ],
+    });
+
+    // 2. Ask project type (or use flag)
+    const projectType: ProjectType = opts.type || await select<ProjectType>({
+      message: 'What type of project is this?',
+      choices: [
+        { name: 'Web application', value: 'web-app' },
+        { name: 'Browser game', value: 'browser-game' },
+        { name: 'Mobile app (Android)', value: 'mobile-android' },
+        { name: 'Animation / motion', value: 'animation' },
+        { name: 'CLI tool', value: 'cli-tool' },
+        { name: 'API / backend only', value: 'api-only' },
+        { name: 'Desktop application', value: 'desktop' },
+        { name: 'Other', value: 'other' },
+      ],
+    });
+
+    // 3. Ask execution mode (or use flag)
+    const mode: ExecutionMode = opts.mode || await select<ExecutionMode>({
+      message: 'How much control do you want?',
+      choices: [
+        { name: 'Interactive — review extracted docs before agents start working', value: 'interactive' },
+        { name: 'Full-HOOL — extract and go, review later', value: 'full-hool' },
+      ],
+    });
+
+    const adapter = createAdapter(platform);
+    const promptsDir = await getPromptsSourceDir();
+    const config: AdapterConfig = {
+      platform,
+      projectType,
+      projectDir,
+      promptsDir,
+      mode,
+    };
+
+    // 4. Scaffold HOOL structure around existing code
+    console.log(chalk.dim('\n  Scaffolding HOOL around existing project...'));
+    await scaffoldOnboard(projectDir, projectType, mode);
+    console.log(chalk.green('  ✓ HOOL structure created (existing code untouched)'));
+
+    // 5. Copy prompt templates
+    console.log(chalk.dim('  Copying agent prompts...'));
+    try {
+      await copyPrompts(projectDir, promptsDir);
+      console.log(chalk.green('  ✓ Agent prompts copied to .hool/prompts/'));
+    } catch {
+      console.log(chalk.yellow('  ⚠ Could not copy prompts (source not found). Copy them manually to .hool/prompts/'));
+    }
+
+    // 6. Inject platform instructions
+    console.log(chalk.dim(`  Configuring for ${platform}...`));
+    await adapter.injectInstructions(config);
+    console.log(chalk.green(`  ✓ ${platform} instructions injected`));
+
+    // 7. Check & install MCPs
+    if (platform !== 'generic') {
+      console.log(chalk.dim('  Checking MCPs...'));
+      const results = await checkAndInstallMcps(adapter, config);
+
+      for (const r of results) {
+        if (r.status === 'already-installed') {
+          console.log(chalk.green(`  ✓ ${r.name} — already installed`));
+        } else if (r.status === 'installed') {
+          console.log(chalk.green(`  ✓ ${r.name} — installed`));
+        } else {
+          console.log(chalk.red(`  ✗ ${r.name} — failed: ${r.error}`));
+        }
+      }
+    }
+
+    // 8. Write MCP manifest + agent manifest
+    const requiredMcps = getRequiredMcpNames(projectType);
+    await writeMcpManifest(projectDir, projectType, requiredMcps);
+    console.log(chalk.green('  ✓ MCP manifest written to .hool/mcps.json'));
+
+    await writeAgentManifest(projectDir);
+    console.log(chalk.green('  ✓ Agent manifest written to .hool/agents.json'));
+
+    // 9. Done — tell user to start the onboarding analysis
+    console.log(chalk.bold.green(`\n  HOOL onboarding ready for: ${projectType}`));
+    console.log(chalk.dim(`  Platform: ${platform}`));
+    console.log(chalk.dim(`  Mode: ${mode}`));
+    console.log(chalk.dim(`  MCPs: ${requiredMcps.join(', ')}`));
+
+    const onboardMessage = platform === 'claude-code'
+      ? [
+          '',
+          '  Next — start the onboarding analysis:',
+          '    $ claude',
+          '    > Read operations/current-phase.md and begin onboarding',
+          '',
+          '  The Product Lead will scan your codebase, extract architecture,',
+          '  infer a spec, and surface issues. You\'ll review before agents start.',
+        ].join('\n')
+      : platform === 'cursor'
+        ? [
+            '',
+            '  Next — start the onboarding analysis:',
+            '    1. Open this project in Cursor',
+            '    2. Tell the agent: "Read operations/current-phase.md and begin onboarding"',
+            '',
+            '  The agent will scan your codebase, extract docs, and present findings for review.',
+          ].join('\n')
+        : [
+            '',
+            '  Next — start the onboarding analysis:',
+            '    1. Open this project in your AI coding tool',
+            '    2. Load HOOL-INSTRUCTIONS.md',
+            '    3. Tell the agent: "Read operations/current-phase.md and begin onboarding"',
+          ].join('\n');
+
+    console.log(onboardMessage);
     console.log('');
   });
 
