@@ -69,6 +69,37 @@ _Onboarding will add the inferred spec here for review._
   };
 }
 
+export function getOnboardCurrentPhase(mode: string = 'interactive'): string {
+  return `# Current Phase
+
+- **Mode**: ${mode}
+- **Phase**: onboarding
+- **Status**: awaiting-analysis
+
+Onboarding an existing project. The Product Lead will:
+1. Scan the project and generate a project profile
+2. Extract architecture, contracts, schema from existing code
+3. Infer a spec from observed behavior (needs human review)
+4. Run gap analysis and surface issues
+5. Seed agent memory with findings
+6. Present a summary for human review
+
+After onboarding completes and human reviews, phase transitions to **standby**.
+`;
+}
+
+export function getOnboardTasksPrepend(): string {
+  return `## Re-onboard Tasks
+- [ ] ONBOARD-001: Project discovery — scan codebase, identify stack
+- [ ] ONBOARD-002: Architecture extraction — reverse-engineer architecture docs
+- [ ] ONBOARD-003: Spec inference — infer product spec from code behavior
+- [ ] ONBOARD-004: Gap analysis — surface issues, tech debt, inconsistencies
+- [ ] ONBOARD-005: Seed agent memory — route findings to agent memory files
+- [ ] ONBOARD-006: Human review gate — present summary for review
+
+`;
+}
+
 export function getMemoryHeaders(): Record<string, string> {
   return {
     'hot.md': `## Compact\n_No history yet._\n\n## Summary\n_No history yet._\n\n## Recent\n_No history yet._\n`,

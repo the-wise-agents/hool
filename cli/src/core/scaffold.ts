@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import type { ProjectType, ExecutionMode } from '../adapters/types.js';
-import { getOperationTemplates, getOnboardOperationTemplates, getMemoryHeaders } from './templates.js';
+import { getOperationTemplates, getOnboardOperationTemplates, getOnboardCurrentPhase, getOnboardTasksPrepend, getMemoryHeaders } from './templates.js';
 import { MCP_REGISTRY } from '../mcps/registry.js';
 
 const AGENTS = [
@@ -116,6 +116,26 @@ export async function scaffoldOnboard(projectDir: string, projectType: ProjectTy
 
   // Create .hool directory
   await fs.mkdir(path.join(projectDir, '.hool/prompts'), { recursive: true });
+}
+
+export async function reonboard(projectDir: string, mode: ExecutionMode = 'interactive'): Promise<void> {
+  // Only overwrite current-phase.md and prepend onboard tasks to task-board.md
+  const opsDir = path.join(projectDir, 'operations');
+
+  // Flip phase to onboarding
+  await fs.writeFile(path.join(opsDir, 'current-phase.md'), getOnboardCurrentPhase(mode), 'utf-8');
+
+  // Prepend onboard tasks to existing task board
+  const taskBoardPath = path.join(opsDir, 'task-board.md');
+  let existing = '';
+  try {
+    existing = await fs.readFile(taskBoardPath, 'utf-8');
+  } catch { /* no task board yet */ }
+
+  const prepend = getOnboardTasksPrepend();
+  const header = '# Task Board\n\n';
+  const body = existing.startsWith('# Task Board') ? existing.replace(/^# Task Board\n*/, '') : existing;
+  await fs.writeFile(taskBoardPath, header + prepend + body, 'utf-8');
 }
 
 export async function copyPrompts(projectDir: string, promptsSourceDir: string): Promise<void> {
