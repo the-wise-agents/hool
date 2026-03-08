@@ -46,7 +46,7 @@ Phase 12 Retrospective .......... Product Lead    (autonomous)
 - **Interactive** (default) — You review and approve spec, design, and architecture before agents build. Phase 4 is the last human gate.
 - **Full-HOOL** — You brainstorm the idea, then agents handle everything. Decisions are logged to `needs-human-review.md` for post-build review.
 
-### Seven Agents
+### Eight Agents
 
 | Agent | Role |
 |-------|------|
@@ -57,8 +57,9 @@ Phase 12 Retrospective .......... Product Lead    (autonomous)
 | **BE Dev** | Backend implementation |
 | **QA** | Test plan, test execution, bug reporting |
 | **Forensic** | Root cause analysis, bug triage, fix routing |
+| **Governor** | Behavioral auditor, rule enforcement, corrective feedback |
 
-The Product Lead is the only user-facing agent. All others are dispatched internally.
+The Product Lead is the only user-facing agent. All others are dispatched internally. The Governor runs continuously (via loop/cron) to audit agent behavior.
 
 ## What Gets Created
 
@@ -83,7 +84,14 @@ your-project/
     current-phase.md
     task-board.md
     bugs.md
+    issues.md
+    inconsistencies.md
     needs-human-review.md
+    client-preferences.md     # User tech/product preferences (living doc)
+    governor-rules.md          # Hard rules enforced by Governor
+    governor-log.md            # Governor audit log
+    context/                   # Dispatch briefs for cross-agent context
+    dispatch/                  # Dispatch records
   memory/                    # Per-agent memory (hot log, cold log, patterns)
     product-lead/
     fe-tech-lead/
@@ -92,6 +100,7 @@ your-project/
     be-dev/
     qa/
     forensic/
+    governor/
   .hool/
     prompts/                 # Agent prompt templates
     mcps.json                # MCP manifest
@@ -137,8 +146,11 @@ HOOL uses these MCP servers (auto-installed during `hool init`):
 ```bash
 npx hool-cli init              # Scaffold HOOL in current directory
 npx hool-cli init --dir ./myapp --platform claude-code --type web-app --mode full-hool
+npx hool-cli onboard           # Onboard an existing codebase into HOOL
+npx hool-cli onboard --reonboard  # Re-onboard (preserve memory/phases, refresh analysis)
 npx hool-cli status            # Show current phase and task summary
 npx hool-cli reset             # Reset operations and memory (keeps phase docs)
+npx hool-cli mode              # Switch between interactive and full-hool modes
 ```
 
 Or install globally:

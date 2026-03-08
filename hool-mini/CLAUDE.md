@@ -33,7 +33,7 @@ When a user starts a new project using HOOL, the Product Lead manages the entire
 | 11 | Forensics | Forensic | No | No |
 | 12 | Retrospective | Product Lead | No | No |
 
-## Agents (7 total)
+## Agents (8 total)
 
 - **Product Lead** — owns vision, contracts, doc consistency, phase gating, agent dispatch
 - **FE Tech Lead** — FE scaffold, LLD, code review, code-vs-doc consistency
@@ -42,6 +42,7 @@ When a user starts a new project using HOOL, the Product Lead manages the entire
 - **BE Dev** — backend implementation
 - **QA** — test plan, test execution, bug reporting
 - **Forensic** — root cause analysis, bug triage, fix routing
+- **Governor** — behavioral auditor, rule enforcement, corrective feedback (runs continuously via loop/cron)
 
 ## File Layout (per project)
 
@@ -83,23 +84,31 @@ project/
     bugs.md
     issues.md
     needs-human-review.md
+    client-preferences.md       # User tech/product preferences (living doc, all agents honour)
+    governor-rules.md            # Hard rules with CRITICAL/HIGH/MEDIUM severity
+    governor-log.md              # Governor audit trail
+    context/                     # Dispatch briefs for cross-agent context
+    dispatch/                    # Dispatch records
   memory/
     product-lead/
       hot.md                     <- compacted recent context (loaded every invocation)
       cold.md                    <- full journal (append-only, loaded on-demand)
       best-practices.md          <- accumulated [PATTERN], [GOTCHA] entries (loaded every invocation)
       issues.md                  <- personal issues log (loaded every invocation)
+      governor-feedback.md       <- corrective feedback from Governor (loaded every invocation)
     fe-tech-lead/
-      hot.md, cold.md, best-practices.md, issues.md
+      hot.md, cold.md, best-practices.md, issues.md, governor-feedback.md
     be-tech-lead/
-      hot.md, cold.md, best-practices.md, issues.md
+      hot.md, cold.md, best-practices.md, issues.md, governor-feedback.md
     fe-dev/
-      hot.md, cold.md, best-practices.md, issues.md
+      hot.md, cold.md, best-practices.md, issues.md, governor-feedback.md
     be-dev/
-      hot.md, cold.md, best-practices.md, issues.md
+      hot.md, cold.md, best-practices.md, issues.md, governor-feedback.md
     qa/
-      hot.md, cold.md, best-practices.md, issues.md
+      hot.md, cold.md, best-practices.md, issues.md, governor-feedback.md
     forensic/
+      hot.md, cold.md, best-practices.md, issues.md, governor-feedback.md
+    governor/
       hot.md, cold.md, best-practices.md, issues.md
   # Everything below is created by agents, NOT by hool init:
   # src/, tests/, logs/ — structure decided in architecture (Phase 4),
@@ -157,11 +166,13 @@ Last 20 entries from cold log
 Each agent role runs one instance at a time. Per-agent memory directories enforce this — concurrent instances would corrupt shared state. FE Dev and BE Dev can run in parallel (different agents), but you won't have 2 FE Devs simultaneously. Product Lead dispatches one task at a time per agent role.
 
 ### General Context Rules
-- Every agent, on every invocation, loads: hot.md + best-practices.md + issues.md
+- Every agent, on every invocation, loads: hot.md + best-practices.md + issues.md + governor-feedback.md
+- Every agent also loads: `operations/client-preferences.md` and `operations/governor-rules.md`
 - Cold.md is loaded on-demand when the agent needs to dig into history
 - Agents can read other agents' memory files
 - Tasks scoped small: 3-5 files max per task
-- When an agent is invoked with a task/issue, they check all 3 loaded memory files before starting work
+- When an agent is invoked with a task/issue, they check all loaded memory files before starting work
+- Before submitting work, agents review best-practices.md and governor-feedback.md as a gate
 
 ## Testing Layers
 
@@ -170,6 +181,18 @@ Each agent role runs one instance at a time. Per-agent memory directories enforc
 3. Integration Tests — contract verification, fully autonomous
 4. E2E Tests — Playwright + multimodal screenshot comparison
 5. Visual Regression — baseline screenshot comparison
+
+## Governor — Behavioral Auditor
+
+The Governor is a safety net that audits agent behavior retroactively:
+
+- **Trigger**: Runs periodically via `/loop` (Claude Code) or cron prompt (Cursor), after every N dispatches, on escalation, or manually
+- **Reads**: `operations/governor-rules.md`, all agents' `cold.md` (last 20 entries), `operations/governor-log.md`
+- **Writes**: `memory/<agent>/governor-feedback.md` (corrective feedback), `operations/governor-log.md` (audit trail), `operations/governor-rules.md` (append new rules only)
+- **Does NOT**: dispatch agents, review code quality, test products, modify prompts, or block execution
+- **Escalates**: structural issues (missing rules, prompt gaps) to `operations/needs-human-review.md`
+
+Governor rules use severity tags: `[CRITICAL]` (must never happen even once), `[HIGH]`, `[MEDIUM]`.
 
 ## Consistency Layers
 
