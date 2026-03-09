@@ -11,10 +11,10 @@ export const MCP_REGISTRY: Record<string, McpDefinition> = {
   },
   playwright: {
     name: 'playwright',
-    installCommand: 'npx @anthropic/mcp-playwright',
+    installCommand: 'npx -y @playwright/mcp',
     configEntry: {
       command: 'npx',
-      args: ['@anthropic/mcp-playwright'],
+      args: ['-y', '@playwright/mcp'],
     },
   },
   deepwiki: {
