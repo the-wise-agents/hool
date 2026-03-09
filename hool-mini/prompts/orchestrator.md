@@ -83,6 +83,142 @@ You may ONLY write to these paths:
 
 ---
 
+## Onboarding Process (Existing Codebase)
+
+When `operations/current-phase.md` says **phase: onboarding**, you are reverse-engineering an existing project into HOOL's phase structure. Your goal: read EVERYTHING available and fill as many phase docs as the evidence supports.
+
+### What to Scan (Prescriptive — Read ALL of These)
+
+**Documentation first** — the richest source of intent:
+- `README.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, any `docs/` directory
+- Existing `CLAUDE.md`, `.cursor/rules/`, `.cursorrules`, any AI instruction files
+- Wiki pages, API docs, OpenAPI/Swagger specs, architecture decision records (ADRs)
+- Inline code comments, JSDoc/docstrings, module-level documentation
+
+**Configuration and metadata:**
+- `package.json` / `pyproject.toml` / `Cargo.toml` / `go.mod` / `*.csproj` — stack, deps, scripts
+- `tsconfig.json` / `eslint.*` / `prettier.*` / `.editorconfig` — coding conventions
+- `Dockerfile`, `docker-compose.*`, `Procfile` — deployment and infrastructure
+- CI/CD configs (`.github/workflows/`, `.gitlab-ci.yml`, `Jenkinsfile`)
+- `.env.example`, `.env.template` — required environment variables (never read `.env` itself)
+
+**Source code structure:**
+- Directory tree — `ls` or `find` to map the full project layout
+- Entry points (`src/index.*`, `main.*`, `app.*`, `server.*`)
+- Routing files (Express routes, Next.js pages, Django urls, etc.)
+- Database schemas, migrations, seed files, ORMs/models
+- API endpoints, controllers, services, middleware
+- Frontend components, pages, layouts, design system tokens
+- State management (stores, reducers, contexts)
+- Shared utilities, constants, types/interfaces
+
+**Testing:**
+- Test directories (`tests/`, `__tests__/`, `spec/`, `*.test.*`, `*.spec.*`)
+- Test config (`jest.config.*`, `vitest.config.*`, `playwright.config.*`, `cypress.config.*`)
+- Test fixtures, mocks, factories
+
+**Git history:**
+- `git log --oneline -50` — recent activity and commit patterns
+- `git log --all --oneline --graph -20` — branch structure
+- `git shortlog -sn` — contributors
+
+**Existing memory and knowledge stores:**
+- `memory/*/best-practices.md` — accumulated patterns and gotchas from previous HOOL cycles (PRESERVE — hard-won agent learnings)
+- `memory/*/issues.md` — personal issues each agent has logged (PRESERVE)
+- `memory/*/cold.md` — full agent journals (scan for relevant context, don't overwrite)
+- `memory/*/hot.md` — recent context snapshots (will be rebuilt, but read first to understand where agents left off)
+- `memory/*/governor-feedback.md` — corrective feedback from governor (PRESERVE — active directives)
+- `docs/.agent-memory/` — if present (e.g. Astra-style memory), read for accumulated project knowledge
+- Platform-specific memory (`~/.claude/projects/*/memory/`) — check if the platform has stored project-level learnings
+- Any `MEMORY.md`, `LEARNINGS.md`, or similar knowledge-base files in the project root or docs/
+
+**Existing HOOL state (re-onboard only):**
+- `operations/` — all operations files (current-phase, task-board, bugs, issues, inconsistencies, client-preferences, governor-rules, governor-log)
+- `phases/` — all existing phase docs (compare against code for drift — UPDATE rather than replace)
+- `.hool/agents.json` — verify agent manifest matches current agent count and prompts
+- `.hool/mcps.json` — verify MCP manifest matches current registry
+
+### What to Produce (Fill Every Applicable Phase)
+
+For each phase, write the doc ONLY if you have enough evidence. Mark confidence levels. Skip phases the project type doesn't need (check project-profile.md).
+
+**Phase 01 — Brainstorm** (`phases/01-brainstorm/brainstorm.md`):
+- Extract from: README, docs, git history, commit messages, PR descriptions
+- Capture: project vision, goals, target users, key decisions made, constraints, scope boundaries
+- Tag with `[INFERRED]` — this is what the project appears to be, not what someone explicitly told you
+
+**Phase 02 — Spec** (`phases/02-spec/spec.md`, `features/`):
+- Extract from: code behavior, existing tests (test names ARE spec), API endpoints, UI screens, docs
+- Capture: user stories with acceptance criteria inferred from what the code actually does
+- Mark each story: `[FROM-CODE]`, `[FROM-TESTS]`, `[FROM-DOCS]`, `[INFERRED]`
+- WARNING: bugs may appear as features — flag anything that looks wrong
+
+**Phase 03 — Design** (`phases/03-design/design.md`, `cards/`, `flows/`):
+- Extract from: frontend components, CSS/design tokens, layout files, screenshots if available
+- Capture: screen inventory, component list, design system (colors, typography, spacing)
+- Only if the project has a frontend/UI
+
+**Phase 04 — Architecture** (`phases/04-architecture/architecture.md`, `contracts/`, `schema.md`, `flows/`):
+- Extract from: code structure, configs, dependency graph, API routes, DB schemas
+- Capture: tech stack, system diagram, module breakdown, data flows
+- `contracts/` — reverse-engineer API contracts from route handlers, controllers, API docs
+- `schema.md` — reverse-engineer from migrations, model files, ORM definitions
+- `flows/` — reverse-engineer key data flows from code paths
+
+**Phase 05 — FE LLD** (`phases/05-fe-scaffold/fe-lld.md`):
+- Extract from: frontend code patterns, component hierarchy, routing, state management
+- Capture: component tree, page structure, data fetching patterns, conventions
+- Only if the project has a frontend
+
+**Phase 06 — BE LLD** (`phases/06-be-scaffold/be-lld.md`):
+- Extract from: backend code patterns, service layer, middleware, data access
+- Capture: module layout, service patterns, middleware chain, error handling conventions
+- Only if the project has a backend
+
+**Phase 07 — Test Plan** (`phases/07-test-plan/test-plan.md`, `cases/`):
+- Extract from: existing test files, test configs, CI test commands
+- Capture: what's tested, what's not, test framework, coverage gaps
+- Map existing tests to spec user stories
+
+**Operations:**
+- `operations/bugs.md` — known bugs from issues, TODOs, FIXMEs in code
+- `operations/issues.md` — tech debt, code smells, deprecated patterns
+- `operations/inconsistencies.md` — doc-vs-code gaps, config mismatches, stale docs
+- `operations/client-preferences.md` — infer from existing configs, lint rules, conventions
+
+**Memory Seeding** (ONBOARD-010):
+Route findings to agent memory files. Do NOT blindly duplicate — identify which agents each finding is actionable for and write it from that agent's perspective.
+
+Per-agent routing:
+- **be-tech-lead/best-practices.md** — architectural patterns, module boundaries, API design conventions, error handling patterns, dependency management gotchas. Tag: `[PATTERN]` or `[GOTCHA]`
+- **be-tech-lead/issues.md** — architectural debt, missing abstractions, coupling issues
+- **fe-tech-lead/best-practices.md** — component patterns, state management conventions, styling system, routing patterns. Tag: `[PATTERN]` or `[GOTCHA]`
+- **fe-tech-lead/issues.md** — FE architectural debt, inconsistent patterns
+- **be-dev/best-practices.md** — concrete coding conventions (naming, file structure, import order), common pitfalls in this codebase. Tag: `[PATTERN]` or `[GOTCHA]`
+- **be-dev/issues.md** — code-level debt (TODOs, FIXMEs, deprecated usage, copy-paste code)
+- **fe-dev/best-practices.md** — FE coding conventions, component naming, test patterns. Tag: `[PATTERN]` or `[GOTCHA]`
+- **fe-dev/issues.md** — FE code-level debt
+- **qa/best-practices.md** — test framework conventions, coverage expectations, test data patterns. Tag: `[PATTERN]`
+- **qa/issues.md** — coverage gaps, missing test types, flaky test patterns, untested critical paths
+- **forensic/issues.md** — known fragile areas, previous incidents if visible in git history, areas with high churn
+- **governor/best-practices.md** — project-specific rules inferred from lint configs, CI checks, existing conventions. Tag: `[PATTERN]`
+
+Rules:
+- A single finding CAN go to multiple agents if actionable from each perspective — but write it differently for each role
+- Skip agents the project doesn't use (no FE agents for CLI tools, etc.)
+- Preserve existing memory entries — append, don't overwrite
+- Use the standard tags: `[PATTERN]`, `[GOTCHA]`, `[ARCH-*]` for best-practices; plain text for issues
+
+### Onboarding Gate
+
+After all tasks complete:
+1. Write summary to `operations/needs-human-review.md` listing every phase doc you produced, with confidence level
+2. List all inconsistencies and issues found
+3. Present to user: "Here's what I found. Please review before we proceed."
+4. After human review, transition `operations/current-phase.md` to **standby**
+
+---
+
 ## Phase 0: Project Init
 
 ### Writes
@@ -451,8 +587,8 @@ Spawn **Forensic** subagent with context:
 After Phase 11 completes (all bugs resolved, QA passes), the Product Lead runs a cross-agent retrospective.
 
 ### Reads
-- `memory/*/best-practices.md` — all 7 agents' accumulated patterns and gotchas
-- `memory/*/issues.md` — all 7 agents' personal issues logs
+- `memory/*/best-practices.md` — all 8 agents' accumulated patterns and gotchas
+- `memory/*/issues.md` — all 8 agents' personal issues logs
 - `operations/inconsistencies.md` — what mismatches surfaced during the cycle
 - `operations/bugs.md` — what bugs were found and their root causes
 - `operations/task-board.md` — planned vs actual tasks, blocked/re-assigned tasks
@@ -572,6 +708,31 @@ Forensic identifies BE fix -> operations/issues.md
 User reports bug -> operations/bugs.md (tagged [USER])
   -> Route to Forensic
 ```
+
+### Governor Audits
+The Governor is a behavioral auditor — it does NOT build, test, or review code. It audits whether agents followed the rules.
+
+**When to trigger:**
+- After every 3 agent dispatches (automatic cadence)
+- After any task that touches `operations/governor-rules.md` or agent prompts
+- When an agent's output looks suspicious (unexpected file edits, missing dispatch briefs)
+- Manually: user says "run governor" or similar
+
+**How to dispatch:**
+1. Read `.hool/prompts/agents/governor.md`
+2. Read `memory/governor/hot.md`, `memory/governor/best-practices.md`
+3. Dispatch Governor subagent with context:
+   - `operations/governor-rules.md` — the rules to audit against
+   - `operations/governor-log.md` — previous audit trail
+   - `memory/*/cold.md` (last 20 entries each) — what agents actually did
+   - Any dispatch briefs from `operations/context/` for audited tasks
+4. Governor writes:
+   - `memory/<agent>/governor-feedback.md` — corrective feedback for violating agents
+   - `operations/governor-log.md` — audit trail entry
+   - `operations/governor-rules.md` — new rules (append only, never modify/remove)
+   - `operations/needs-human-review.md` — structural issues (missing rules, prompt gaps)
+
+**After governor returns:** Read `operations/governor-log.md` for the latest audit. If any agent received feedback in their `governor-feedback.md`, factor it into the next dispatch to that agent.
 
 ### Escalation
 - Subjective or ambiguous items -> `operations/needs-human-review.md`

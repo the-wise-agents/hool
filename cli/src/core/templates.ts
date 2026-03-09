@@ -28,13 +28,12 @@ export function getOnboardOperationTemplates(mode: string = 'interactive'): Reco
 - **Phase**: onboarding
 - **Status**: awaiting-analysis
 
-Onboarding an existing project. The Product Lead will:
-1. Scan the project and generate a project profile
-2. Extract architecture, contracts, schema from existing code
-3. Infer a spec from observed behavior (needs human review)
-4. Run gap analysis and surface issues
-5. Seed agent memory with findings
-6. Present a summary for human review
+Onboarding an existing project. See the "Onboarding Process" section in the orchestrator prompt for the full scan checklist and phase doc requirements. The Product Lead will:
+1. Full project scan — read ALL docs, configs, code structure, git history
+2. Reverse-engineer EVERY applicable phase doc (brainstorm, spec, design, architecture, LLDs, test plan)
+3. Populate operations files (bugs from TODOs, tech debt, inconsistencies, client preferences)
+4. Seed agent memory with findings
+5. Present comprehensive summary for human review
 
 After onboarding completes and human reviews, phase transitions to **standby**.
 `,
@@ -42,12 +41,17 @@ After onboarding completes and human reviews, phase transitions to **standby**.
     'task-board.md': `# Task Board
 
 ## Active Tasks
-- [ ] ONBOARD-001: Project discovery — scan codebase, identify stack
-- [ ] ONBOARD-002: Architecture extraction — reverse-engineer architecture docs
-- [ ] ONBOARD-003: Spec inference — infer product spec from code behavior
-- [ ] ONBOARD-004: Gap analysis — surface issues, tech debt, inconsistencies
-- [ ] ONBOARD-005: Seed agent memory — route findings to agent memory files
-- [ ] ONBOARD-006: Human review gate — present summary for review
+- [ ] ONBOARD-001: Full project scan — read ALL docs (README, CLAUDE.md, CONTRIBUTING, CHANGELOG, docs/, AI instruction files), ALL configs (package.json/pyproject.toml/etc, tsconfig, eslint, docker, CI/CD, .env.example), ALL existing memory (memory/*/best-practices.md, issues.md, cold.md, governor-feedback.md — PRESERVE these), any MEMORY.md/LEARNINGS.md/docs/.agent-memory/, existing HOOL state (operations/, phases/, .hool/*.json), map directory tree, identify entry points, git log -50, git shortlog -sn | assigned: product-lead
+- [ ] ONBOARD-002: Brainstorm extraction — reverse-engineer phases/01-brainstorm/brainstorm.md from README, docs, git history. Capture: vision, goals, target users, key decisions, constraints. Tag all items [INFERRED] | assigned: product-lead | depends: ONBOARD-001
+- [ ] ONBOARD-003: Spec inference — reverse-engineer phases/02-spec/spec.md from code behavior, existing tests (test names ARE spec), API endpoints, UI screens, docs. Write user stories with acceptance criteria. Tag each: [FROM-CODE], [FROM-TESTS], [FROM-DOCS], [INFERRED]. Flag anything that looks like a bug | assigned: product-lead | depends: ONBOARD-001
+- [ ] ONBOARD-004: Architecture extraction — reverse-engineer phases/04-architecture/architecture.md, contracts/, schema.md, flows/ from code structure, configs, dependency graph, API routes, DB schemas/migrations/models | assigned: product-lead | depends: ONBOARD-001
+- [ ] ONBOARD-005: Design extraction (if FE exists) — reverse-engineer phases/03-design/design.md from frontend components, CSS/design tokens, layouts. Skip if no frontend | assigned: product-lead | depends: ONBOARD-001
+- [ ] ONBOARD-006: FE LLD extraction (if FE exists) — reverse-engineer phases/05-fe-scaffold/fe-lld.md from frontend code patterns, component hierarchy, routing, state management. Skip if no frontend | assigned: product-lead | depends: ONBOARD-004
+- [ ] ONBOARD-007: BE LLD extraction (if BE exists) — reverse-engineer phases/06-be-scaffold/be-lld.md from backend code patterns, service layer, middleware, data access. Skip if no backend | assigned: product-lead | depends: ONBOARD-004
+- [ ] ONBOARD-008: Test plan extraction — reverse-engineer phases/07-test-plan/test-plan.md from existing test files, test configs, CI test commands. Map existing tests to spec stories. Capture coverage gaps | assigned: product-lead | depends: ONBOARD-003
+- [ ] ONBOARD-009: Operations population — scan for TODOs/FIXMEs/HACK (→ bugs.md), tech debt/code smells (→ issues.md), doc-vs-code gaps (→ inconsistencies.md), infer client preferences from configs/lint rules (→ client-preferences.md) | assigned: product-lead | depends: ONBOARD-001
+- [ ] ONBOARD-010: Seed agent memory — route findings to agent memory files (see orchestrator "Memory Seeding" section for per-agent routing). Write each finding from the receiving agent's perspective. A finding CAN go to multiple agents if actionable from each role. Skip agents the project doesn't use. Append to existing memory, don't overwrite | assigned: product-lead | depends: ONBOARD-002 ONBOARD-003 ONBOARD-004 ONBOARD-009
+- [ ] ONBOARD-011: Human review gate — write summary to needs-human-review.md listing every phase doc produced with confidence level, all inconsistencies, all issues. Present to user for review | assigned: product-lead | depends: ONBOARD-010
 
 ## Completed Tasks
 _None._
@@ -88,13 +92,12 @@ export function getOnboardCurrentPhase(mode: string = 'interactive'): string {
 - **Phase**: onboarding
 - **Status**: awaiting-analysis
 
-Onboarding an existing project. The Product Lead will:
-1. Scan the project and generate a project profile
-2. Extract architecture, contracts, schema from existing code
-3. Infer a spec from observed behavior (needs human review)
-4. Run gap analysis and surface issues
-5. Seed agent memory with findings
-6. Present a summary for human review
+Onboarding an existing project. See the "Onboarding Process" section in the orchestrator prompt for the full scan checklist and phase doc requirements. The Product Lead will:
+1. Full project scan — read ALL docs, configs, code structure, git history
+2. Reverse-engineer EVERY applicable phase doc (brainstorm, spec, design, architecture, LLDs, test plan)
+3. Populate operations files (bugs from TODOs, tech debt, inconsistencies, client preferences)
+4. Seed agent memory with findings
+5. Present comprehensive summary for human review
 
 After onboarding completes and human reviews, phase transitions to **standby**.
 `;
@@ -102,12 +105,17 @@ After onboarding completes and human reviews, phase transitions to **standby**.
 
 export function getOnboardTasksPrepend(): string {
   return `## Re-onboard Tasks
-- [ ] ONBOARD-001: Project discovery — scan codebase, identify stack
-- [ ] ONBOARD-002: Architecture extraction — reverse-engineer architecture docs
-- [ ] ONBOARD-003: Spec inference — infer product spec from code behavior
-- [ ] ONBOARD-004: Gap analysis — surface issues, tech debt, inconsistencies
-- [ ] ONBOARD-005: Seed agent memory — route findings to agent memory files
-- [ ] ONBOARD-006: Human review gate — present summary for review
+- [ ] ONBOARD-001: Full project scan — read ALL docs (README, CLAUDE.md, CONTRIBUTING, CHANGELOG, docs/, AI instruction files), ALL configs (package.json/pyproject.toml/etc, tsconfig, eslint, docker, CI/CD, .env.example), ALL existing memory (memory/*/best-practices.md, issues.md, cold.md, governor-feedback.md — PRESERVE these), any MEMORY.md/LEARNINGS.md/docs/.agent-memory/, existing HOOL state (operations/, phases/, .hool/*.json), map directory tree, identify entry points, git log -50, git shortlog -sn. Compare against existing phase docs for drift | assigned: product-lead
+- [ ] ONBOARD-002: Update brainstorm — compare phases/01-brainstorm/brainstorm.md against current README/docs/git history. Update or create if missing. Tag changes [RE-ONBOARD] | assigned: product-lead | depends: ONBOARD-001
+- [ ] ONBOARD-003: Update spec — compare phases/02-spec/spec.md against current code behavior, tests, API endpoints. Add new stories, mark removed features. Tag: [FROM-CODE], [FROM-TESTS], [FROM-DOCS], [INFERRED] | assigned: product-lead | depends: ONBOARD-001
+- [ ] ONBOARD-004: Update architecture — compare phases/04-architecture/ against current code structure, configs, deps. Update architecture.md, contracts/, schema.md, flows/ | assigned: product-lead | depends: ONBOARD-001
+- [ ] ONBOARD-005: Update design (if FE exists) — compare phases/03-design/ against current frontend. Skip if no frontend | assigned: product-lead | depends: ONBOARD-001
+- [ ] ONBOARD-006: Update FE LLD (if FE exists) — compare phases/05-fe-scaffold/fe-lld.md against current frontend code. Skip if no frontend | assigned: product-lead | depends: ONBOARD-004
+- [ ] ONBOARD-007: Update BE LLD (if BE exists) — compare phases/06-be-scaffold/be-lld.md against current backend code. Skip if no backend | assigned: product-lead | depends: ONBOARD-004
+- [ ] ONBOARD-008: Update test plan — compare phases/07-test-plan/ against current test files. Map new tests to stories. Flag coverage gaps | assigned: product-lead | depends: ONBOARD-003
+- [ ] ONBOARD-009: Update operations — rescan for TODOs/FIXMEs (→ bugs.md), tech debt (→ issues.md), doc-vs-code gaps (→ inconsistencies.md), preferences from configs (→ client-preferences.md) | assigned: product-lead | depends: ONBOARD-001
+- [ ] ONBOARD-010: Seed agent memory — route findings to agent memory files (see orchestrator "Memory Seeding" section for per-agent routing). Write each finding from the receiving agent's perspective. A finding CAN go to multiple agents if actionable from each role. Skip agents the project doesn't use. Append to existing memory, don't overwrite | assigned: product-lead | depends: ONBOARD-002 ONBOARD-003 ONBOARD-004 ONBOARD-009
+- [ ] ONBOARD-011: Human review gate — write summary to needs-human-review.md listing changes since last onboard, new inconsistencies, updated phase docs with confidence levels | assigned: product-lead | depends: ONBOARD-010
 
 `;
 }

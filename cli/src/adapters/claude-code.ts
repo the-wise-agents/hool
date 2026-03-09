@@ -5,6 +5,9 @@ import type { Adapter, AdapterConfig, McpDefinition, AgentPlatform } from './typ
 
 const CLAUDE_MCP_CONFIG_PATH = path.join(os.homedir(), '.claude', 'mcp_servers.json');
 
+const HOOL_START_MARKER = '<!-- HOOL:START -->';
+const HOOL_END_MARKER = '<!-- HOOL:END -->';
+
 function getMcpSection(projectType: string): string {
   const mcps = ['- **context7**: Use `mcp__context7__resolve-library-id` and `mcp__context7__query-docs` for up-to-date library documentation'];
   if (['web-app', 'browser-game', 'animation'].includes(projectType)) {
@@ -16,8 +19,9 @@ function getMcpSection(projectType: string): string {
   return mcps.join('\n');
 }
 
-function generateClaudeMd(config: AdapterConfig): string {
-  return `# HOOL — Agent-Driven SDLC
+function generateClaudeMd(config: AdapterConfig, orchestratorContent: string): string {
+  return `${HOOL_START_MARKER}
+# HOOL — Agent-Driven SDLC
 
 This project uses the HOOL framework. The Product Lead is the sole user-facing agent.
 All other agents are internal — dispatched by the Product Lead as subagents.
@@ -25,12 +29,12 @@ All other agents are internal — dispatched by the Product Lead as subagents.
 ## Quick Start
 
 You are the Product Lead. On every invocation — **before answering any question**:
-1. Read \`.hool/prompts/orchestrator.md\` — your full process and rules
-2. Read \`operations/current-phase.md\` to know where you are
-3. Read \`operations/task-board.md\` to know what's in flight
-4. Read your memory files (\`memory/product-lead/hot.md\`, \`best-practices.md\`, \`issues.md\`)
+1. Read \`operations/current-phase.md\` to know where you are
+2. Read \`operations/task-board.md\` to know what's in flight
+3. Read your memory files (\`memory/product-lead/hot.md\`, \`best-practices.md\`, \`issues.md\`)
+4. Read the full orchestrator prompt below — your complete process and rules
 5. **If there are pending tasks**: Tell the user what's pending and ask if you should proceed, or if they have something else in mind. Do NOT silently wait for explicit instructions — you are the driver, not a passenger.
-6. Continue from where you left off (see Autonomous Execution Loop in orchestrator.md)
+6. Continue from where you left off (see Autonomous Execution Loop below)
 
 ## How to Dispatch Subagents
 
@@ -66,7 +70,13 @@ Phase 4 (Architecture) is the FINAL human gate. After that, you run autonomously
 - You are the **sole user-facing agent** — the user only talks to you
 - All state lives in files: \`phases/\`, \`operations/\`, \`memory/\`
 - Agents never modify their own prompts — escalate to \`operations/needs-human-review.md\`
-- Read your full orchestrator prompt at \`.hool/prompts/orchestrator.md\` for the complete process
+
+---
+
+## Orchestrator Prompt
+
+${orchestratorContent}
+${HOOL_END_MARKER}
 `;
 }
 
@@ -75,18 +85,37 @@ export class ClaudeCodeAdapter implements Adapter {
 
   async injectInstructions(config: AdapterConfig): Promise<void> {
     const claudeMdPath = path.join(config.projectDir, 'CLAUDE.md');
-    const content = generateClaudeMd(config);
+    const orchestratorPath = path.join(config.projectDir, '.hool', 'prompts', 'orchestrator.md');
 
-    // Append to existing CLAUDE.md or create new
+    let orchestratorContent = '';
+    try {
+      orchestratorContent = await fs.readFile(orchestratorPath, 'utf-8');
+    } catch {
+      // Fallback: read from promptsDir (source) if .hool/prompts doesn't exist yet
+      try {
+        orchestratorContent = await fs.readFile(path.join(config.promptsDir, 'orchestrator.md'), 'utf-8');
+      } catch {
+        orchestratorContent = '<!-- orchestrator.md not found — run hool init to generate -->';
+      }
+    }
+
+    const content = generateClaudeMd(config, orchestratorContent);
+
+    // Replace between markers, append, or create new
     try {
       const existing = await fs.readFile(claudeMdPath, 'utf-8');
-      if (existing.includes('HOOL')) {
-        // Already has HOOL instructions, replace
-        const marker = '# HOOL — Agent-Driven SDLC';
-        const idx = existing.indexOf(marker);
-        if (idx >= 0) {
-          await fs.writeFile(claudeMdPath, existing.slice(0, idx) + content, 'utf-8');
-        }
+      const startIdx = existing.indexOf(HOOL_START_MARKER);
+      const endIdx = existing.indexOf(HOOL_END_MARKER);
+
+      if (startIdx >= 0 && endIdx >= 0) {
+        // Marker-based replacement — clean upgrade path
+        const before = existing.slice(0, startIdx);
+        const after = existing.slice(endIdx + HOOL_END_MARKER.length);
+        await fs.writeFile(claudeMdPath, before + content + after, 'utf-8');
+      } else if (existing.includes('# HOOL')) {
+        // Legacy format (pre-markers) — replace from old header onwards
+        const legacyIdx = existing.indexOf('# HOOL');
+        await fs.writeFile(claudeMdPath, existing.slice(0, legacyIdx) + content, 'utf-8');
       } else {
         await fs.writeFile(claudeMdPath, existing + '\n\n' + content, 'utf-8');
       }
@@ -126,7 +155,7 @@ export class ClaudeCodeAdapter implements Adapter {
       '',
       '  Start building:',
       '    $ claude',
-      '    > Read .hool/prompts/orchestrator.md and begin Phase 1: Brainstorm',
+      '    > Begin Phase 1: Brainstorm',
       '',
       '  Or if you have the /hool skill registered:',
       '    > /hool start',
