@@ -55,17 +55,17 @@ project/
       brainstorm.md
     02-spec/
       spec.md                   <- index: overview, data model, NFRs
-      features/                 <- per-feature user stories (for larger projects)
+      features/                 <- per-feature user stories (REQUIRED if >5 stories)
     03-design/
       design.md                 <- index: design system, screen inventory, components
-      cards/                    <- one HTML design card per screen
-      flows/                   <- per-feature user flow diagrams (for larger projects)
+      cards/                    <- one HTML design card per screen (REQUIRED)
+      flows/                   <- per-feature user flow diagrams (REQUIRED if >3 journeys)
     04-architecture/
       architecture.md           <- index: tech stack, system overview, env setup
-      contracts/                <- API contracts split by domain area
+      contracts/                <- API contracts split by domain (REQUIRED: _index.md + per-domain)
         _index.md              <- base URL, auth, error format, endpoint summary
       schema.md                 <- single file: all tables, indexes, relationships
-      flows/                   <- per-feature flow diagrams (mermaid sequences)
+      flows/                   <- per-feature flow diagrams (REQUIRED: one per feature)
       fe/                      <- FE Tech Lead validation notes
       be/                      <- BE Tech Lead validation notes
     05-fe-scaffold/
@@ -76,7 +76,7 @@ project/
       services/                <- per-service implementation specs (for larger projects)
     07-test-plan/
       test-plan.md             <- index: coverage matrix, test infrastructure
-      cases/                   <- test cases split by feature (for larger projects)
+      cases/                   <- test cases split by feature (REQUIRED if >10 cases)
   operations/
     current-phase.md
     task-board.md

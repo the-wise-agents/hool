@@ -209,6 +209,23 @@ Rules:
 - Preserve existing memory entries — append, don't overwrite
 - Use the standard tags: `[PATTERN]`, `[GOTCHA]`, `[ARCH-*]` for best-practices; plain text for issues
 
+### Content Migration Rule (Onboarding Only)
+
+When onboarding a project that already has structured documentation (e.g., `docs/design-cards/`, `docs/api/`, `docs/flows/`, OpenAPI specs, ADRs), you MUST migrate that content into the corresponding phase structure — do NOT ignore it or flatten it into a single summary file.
+
+Migration mapping:
+- `docs/design-cards/` or similar → `phases/03-design/cards/`
+- `docs/api/`, OpenAPI/Swagger specs → `phases/04-architecture/contracts/`
+- `docs/flows/`, sequence diagrams → `phases/04-architecture/flows/` or `phases/03-design/flows/`
+- `docs/architecture/`, ADRs → `phases/04-architecture/`
+- Existing test plans, QA docs → `phases/07-test-plan/cases/`
+
+Rules:
+- Preserve the source structure — one source file maps to one phase file (don't merge multiple sources into one)
+- Adapt format to HOOL conventions (markdown, standard headings) but preserve content
+- If source content is richer than what HOOL phases specify, keep the extra detail — don't strip it
+- Reference the original source path in the migrated file for traceability
+
 ### Onboarding Gate
 
 After all tasks complete:
@@ -301,7 +318,7 @@ After all tasks complete:
 
 ### Writes
 - `phases/02-spec/spec.md` — index: overview, data model, NFRs
-- `phases/02-spec/features/` — per-feature user stories (for larger projects with >5 stories)
+- `phases/02-spec/features/` — per-feature user stories (REQUIRED for projects with >5 stories)
 
 ### Process (interactive mode)
 1. Read all prior phase docs
@@ -322,6 +339,11 @@ After all tasks complete:
 7. Log to cold log, rebuild hot log
 8. Advance to Phase 3 immediately — no sign-off
 
+### Gate
+- `spec.md` exists with user stories and acceptance criteria
+- **IF >5 user stories:** `features/` MUST contain ≥1 file per feature group. A single `spec.md` is NOT sufficient — split by feature domain.
+- All stories have acceptance criteria
+
 ---
 
 ## Phase 3: Design
@@ -333,8 +355,8 @@ After all tasks complete:
 
 ### Writes
 - `phases/03-design/design.md` — index: design system, screen inventory, components
-- `phases/03-design/cards/*.html` — design cards (one per screen/component)
-- `phases/03-design/flows/` — per-feature user flow diagrams (for larger projects)
+- `phases/03-design/cards/*.html` — design cards (REQUIRED: one per screen/component)
+- `phases/03-design/flows/` — per-feature user flow diagrams (REQUIRED for projects with >3 user journeys)
 
 ### Process (interactive mode)
 1. Read all prior phase docs
@@ -355,6 +377,11 @@ After all tasks complete:
 7. Log to cold log, rebuild hot log
 8. Advance to Phase 4 immediately — no sign-off
 
+### Gate
+- `design.md` exists with screen inventory and design system
+- `cards/` MUST contain ≥1 `.html` file per screen/component. An empty `cards/` directory is NOT acceptable.
+- **IF >3 user journeys:** `flows/` MUST contain ≥1 flow file per user journey.
+
 ---
 
 ## Phase 4: Architecture (FINAL human gate — skipped in full-hool)
@@ -367,9 +394,9 @@ After all tasks complete:
 
 ### Writes
 - `phases/04-architecture/architecture.md` — tech stack, system design, component diagram
-- `phases/04-architecture/contracts/` — API contracts split by domain (`_index.md` + per-domain files)
+- `phases/04-architecture/contracts/` — API contracts split by domain (REQUIRED: `_index.md` + one file per API domain)
 - `phases/04-architecture/schema.md` — data models and DB schema
-- `phases/04-architecture/flows/` — data flows and sequence diagrams per feature
+- `phases/04-architecture/flows/` — data flows and sequence diagrams per feature (REQUIRED: one file per feature)
 
 ### Process (interactive mode)
 1. Read all prior phase docs
@@ -404,6 +431,13 @@ After all tasks complete:
 10. Resolve any mismatches autonomously — pick the simpler option, document the choice
 11. Log to cold log, rebuild hot log
 12. Advance to Phase 5 immediately — no sign-off
+
+### Gate
+- `architecture.md` exists with tech stack, system design, module breakdown
+- `contracts/` MUST contain `_index.md` + ≥1 per-domain contract file. An empty `contracts/` directory is NOT acceptable.
+- `schema.md` exists (if project uses a database/data store)
+- `flows/` MUST contain ≥1 flow file per major feature. An empty `flows/` directory is NOT acceptable.
+- Both Tech Leads have validated (interactive + full-hool)
 
 ---
 
@@ -473,7 +507,10 @@ Spawn **QA** subagent with context:
 - QA updates own memory files (cold.md, hot.md, best-practices.md, issues.md)
 
 ### Gate
-Product Lead verifies test plan covers all spec acceptance criteria. Log and advance.
+- `test-plan.md` exists with coverage matrix and test infrastructure
+- **IF >10 test cases:** `cases/` MUST contain ≥1 file per feature/module. A single `test-plan.md` is NOT sufficient — split cases by feature.
+- Test plan covers all spec acceptance criteria
+- Log and advance.
 
 ---
 
