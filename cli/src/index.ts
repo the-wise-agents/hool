@@ -36,7 +36,7 @@ const program = new Command();
 program
   .name('hool')
   .description('Agent-Driven SDLC — scaffold and configure HOOL for any project')
-  .version('0.2.0');
+  .version('0.2.1');
 
 // ── hool init ──────────────────────────────────────────────
 
