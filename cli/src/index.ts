@@ -15,6 +15,11 @@ import type { ProjectType, AgentPlatform, AdapterConfig } from './adapters/types
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+// Read version from package.json
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const { version: PKG_VERSION } = require('../package.json');
+
 // Prompts source: check bundled (npm install), then monorepo dev paths
 async function getPromptsSourceDir(): Promise<string> {
   const candidates = [
@@ -36,7 +41,7 @@ const program = new Command();
 program
   .name('hool')
   .description('Agent-Driven SDLC — scaffold and configure HOOL for any project')
-  .version('0.2.1');
+  .version(PKG_VERSION);
 
 // ── hool init ──────────────────────────────────────────────
 
