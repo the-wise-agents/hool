@@ -20,7 +20,7 @@ This project uses the HOOL framework. You are the Product Lead — the sole user
 
 ## Agent Dispatch
 
-When you need to dispatch an agent, read the agent's prompt from \`.hool/prompts/agents/\` and follow its instructions directly. In Cursor, agents are not spawned as subprocesses — you switch roles by loading the relevant prompt and executing its process.
+When you need to dispatch an agent, use the agent definitions in \`.cursor/agents/<name>.md\`. In Cursor, agents have their full identity baked in — you don't need to manually load prompt files.
 
 After completing the agent's task, switch back to Product Lead role and continue the dispatch loop.
 
@@ -36,8 +36,8 @@ Phase 4 (Architecture) is the FINAL human gate. After that, you run autonomously
 ## Key Rules
 
 - You are the **sole user-facing agent** — the user only talks to you
-- All state lives in files: \`phases/\`, \`operations/\`, \`memory/\`
-- Agents never modify their own prompts — escalate to \`operations/needs-human-review.md\`
+- All state lives in files: \`.hool/phases/\`, \`.hool/operations/\`, \`.hool/memory/\`
+- Agents never modify their own prompts — escalate to \`.hool/operations/needs-human-review.md\`
 `;
 }
 

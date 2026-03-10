@@ -19,8 +19,8 @@ Thumbs.db
 # Test artifacts
 temp/
 
-# HOOL runtime state (generated per-project, not source)
+# HOOL runtime state (this project dogfoods HOOL — these are instance files, not templates)
 .hool/
-memory/
-operations/
-phases/
+.claude/
+.cursor/
+CLAUDE.md

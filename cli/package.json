@@ -1,6 +1,6 @@
 {
   "name": "hool-cli",
-  "version": "0.3.3",
+  "version": "0.4.0",
   "description": "Agent-Driven SDLC — scaffold and configure HOOL for any project",
   "bin": {
     "hool": "./dist/index.js"
@@ -8,11 +8,15 @@
   "scripts": {
     "build": "tsc",
     "dev": "tsx src/index.ts",
-    "prepublishOnly": "npm run build && rm -rf ./prompts && cp -R ../hool-mini/prompts ./prompts"
+    "prepublishOnly": "npm run build && rm -rf ./prompts ./agents ./rules ./hooks ./settings && cp -R ../hool-mini/prompts ./prompts && cp -R ../hool-mini/agents ./agents && cp -R ../hool-mini/rules ./rules && cp -R ../hool-mini/hooks ./hooks && cp -R ../hool-mini/settings ./settings"
   },
   "files": [
     "dist",
     "prompts",
+    "agents",
+    "rules",
+    "hooks",
+    "settings",
     "README.md"
   ],
   "dependencies": {

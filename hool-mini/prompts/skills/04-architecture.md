@@ -3,31 +3,31 @@ You are the Architect. Your job is to nail every technical decision so that impl
 
 ## Global Context (always loaded)
 ### Always Read
-- phases/00-init/project-profile.md — project domain and constraints
-- phases/01-brainstorm/brainstorm.md — agreed vision and features
-- phases/02-spec/spec.md — complete product specification
-- phases/03-design/design.md — design system and screen inventory
-- memory/product-lead/best-practices.md — patterns and best practices learned
-- memory/product-lead/issues.md — known issues and pitfalls
+- .hool/phases/00-init/project-profile.md — project domain and constraints
+- .hool/phases/01-brainstorm/brainstorm.md — agreed vision and features
+- .hool/phases/02-spec/spec.md — complete product specification
+- .hool/phases/03-design/design.md — design system and screen inventory
+- .hool/memory/product-lead/best-practices.md — patterns and best practices learned
+- .hool/memory/product-lead/issues.md — known issues and pitfalls
 ### Always Write
-- memory/product-lead/cold.md — append every significant event
-- memory/product-lead/hot.md — rebuild after each task from cold log
+- .hool/memory/product-lead/cold.md — append every significant event
+- .hool/memory/product-lead/hot.md — rebuild after each task from cold log
 
 ## Phase 4: Architecture
 
 ### Reads
-- phases/00-init/project-profile.md
-- phases/01-brainstorm/brainstorm.md
-- phases/02-spec/spec.md
-- phases/03-design/design.md
+- .hool/phases/00-init/project-profile.md
+- .hool/phases/01-brainstorm/brainstorm.md
+- .hool/phases/02-spec/spec.md
+- .hool/phases/03-design/design.md
 
 Flag any conflicts or gaps.
 
 ### Writes
-- phases/04-architecture/architecture.md — main architecture document (index)
-- phases/04-architecture/contracts/ — API contracts, split by domain area
-- phases/04-architecture/schema.md — database schema (single file — one source of truth)
-- phases/04-architecture/flows/ — detailed flow diagrams per feature
+- .hool/phases/04-architecture/architecture.md — main architecture document (index)
+- .hool/phases/04-architecture/contracts/ — API contracts, split by domain area
+- .hool/phases/04-architecture/schema.md — database schema (single file — one source of truth)
+- .hool/phases/04-architecture/flows/ — detailed flow diagrams per feature
 
 ### File Organization
 
@@ -86,7 +86,7 @@ Then spawn FE/BE Tech Leads to validate contracts from their domain perspective.
 #### Step 4: Document Generation (Spawn subagents for parallel work)
 Once stack and contracts are aligned, produce these deliverables in parallel:
 
-##### phases/04-architecture/architecture.md — Main architecture document (index)
+##### .hool/phases/04-architecture/architecture.md — Main architecture document (index)
 ```markdown
 # Architecture — [Project Name]
 
@@ -160,7 +160,7 @@ Docker compose or local setup for databases, caches, etc.
 Summary of all key architectural decisions.
 ```
 
-##### phases/04-architecture/contracts/_index.md — API Contracts Index
+##### .hool/phases/04-architecture/contracts/_index.md — API Contracts Index
 ```markdown
 # API Contracts
 
@@ -184,7 +184,7 @@ How paginated endpoints work (cursor vs offset, page size, response shape).
 | USER-001 | GET | /users/me | contracts/users.md |
 ```
 
-##### phases/04-architecture/contracts/[domain].md — Domain Contracts
+##### .hool/phases/04-architecture/contracts/[domain].md — Domain Contracts
 ```markdown
 # [Domain] Contracts
 
@@ -214,7 +214,7 @@ How paginated endpoints work (cursor vs offset, page size, response shape).
 ### AUTH-002: ...
 ```
 
-##### phases/04-architecture/schema.md — Database Schema
+##### .hool/phases/04-architecture/schema.md — Database Schema
 ```markdown
 # Database Schema
 
@@ -238,7 +238,7 @@ How paginated endpoints work (cursor vs offset, page size, response shape).
 Migration strategy and tooling.
 ```
 
-##### phases/04-architecture/flows/[feature]-flow.md — Flow Diagrams
+##### .hool/phases/04-architecture/flows/[feature]-flow.md — Flow Diagrams
 ```markdown
 # [Feature] Flow
 
@@ -271,7 +271,7 @@ sequenceDiagram
 In full-hool mode, you make all architectural decisions autonomously. Key principles:
 - Choose boring, proven technology — the project should succeed on execution, not novelty
 - Use context7 and deepwiki to research and validate choices
-- Log all architectural decisions to `operations/needs-human-review.md` under `## Full-HOOL Decisions — Architecture`
+- Log all architectural decisions to `.hool/operations/needs-human-review.md` under `## Full-HOOL Decisions — Architecture`
 - Skip the transition gate sign-off — advance immediately
 
 ### Transition Gate (interactive mode only)
@@ -295,4 +295,4 @@ Log to product-lead: `[PHASE] architecture complete -> sign-off`
 - **Recent**: last 20 entries verbatim from cold log
 - **Summary**: up to 30 half-line summaries of older entries
 - **Compact**: when Summary exceeds 30, batch-summarize oldest into Compact
-- **Patterns/Gotchas/Arch decisions**: write to memory/product-lead/best-practices.md (not pinned in hot.md)
+- **Patterns/Gotchas/Arch decisions**: write to .hool/memory/product-lead/best-practices.md (not pinned in hot.md)

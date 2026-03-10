@@ -48,7 +48,7 @@ When a user starts a new project using HOOL, the Product Lead manages the entire
 
 ```
 project/
-  phases/
+  .hool/phases/
     00-init/
       project-profile.md
     01-brainstorm/
@@ -77,7 +77,7 @@ project/
     07-test-plan/
       test-plan.md             <- index: coverage matrix, test infrastructure
       cases/                   <- test cases split by feature (REQUIRED if >10 cases)
-  operations/
+  .hool/operations/
     current-phase.md
     task-board.md
     inconsistencies.md
@@ -89,7 +89,7 @@ project/
     governor-log.md              # Governor audit trail
     context/                     # Dispatch briefs for cross-agent context
     dispatch/                    # Dispatch records
-  memory/
+  .hool/memory/
     product-lead/
       hot.md                     <- compacted recent context (loaded every invocation)
       cold.md                    <- full journal (append-only, loaded on-demand)
@@ -119,7 +119,7 @@ project/
 
 ## Context Management — Agent Memory
 
-Agents are stateless. Files ARE the state. Every agent maintains four memory files in `memory/<agent-name>/`:
+Agents are stateless. Files ARE the state. Every agent maintains four memory files in `.hool/memory/<agent-name>/`:
 
 ### Files Loaded Every Invocation
 1. **hot.md** — compacted recent context. Pure recent work state. Rebuilt by the agent after each task from the cold log.
@@ -167,7 +167,7 @@ Each agent role runs one instance at a time. Per-agent memory directories enforc
 
 ### General Context Rules
 - Every agent, on every invocation, loads: hot.md + best-practices.md + issues.md + governor-feedback.md
-- Every agent also loads: `operations/client-preferences.md` and `operations/governor-rules.md`
+- Every agent also loads: `.hool/operations/client-preferences.md` and `.hool/operations/governor-rules.md`
 - Cold.md is loaded on-demand when the agent needs to dig into history
 - Agents can read other agents' memory files
 - Tasks scoped small: 3-5 files max per task
@@ -187,10 +187,10 @@ Each agent role runs one instance at a time. Per-agent memory directories enforc
 The Governor is a safety net that audits agent behavior retroactively:
 
 - **Trigger**: Runs periodically via `/loop` (Claude Code) or cron prompt (Cursor), after every N dispatches, on escalation, or manually
-- **Reads**: `operations/governor-rules.md`, all agents' `cold.md` (last 20 entries), `operations/governor-log.md`
-- **Writes**: `memory/<agent>/governor-feedback.md` (corrective feedback), `operations/governor-log.md` (audit trail), `operations/governor-rules.md` (append new rules only)
+- **Reads**: `.hool/operations/governor-rules.md`, all agents' `cold.md` (last 20 entries), `.hool/operations/governor-log.md`
+- **Writes**: `.hool/memory/<agent>/governor-feedback.md` (corrective feedback), `.hool/operations/governor-log.md` (audit trail), `.hool/operations/governor-rules.md` (append new rules only)
 - **Does NOT**: dispatch agents, review code quality, test products, modify prompts, or block execution
-- **Escalates**: structural issues (missing rules, prompt gaps) to `operations/needs-human-review.md`
+- **Escalates**: structural issues (missing rules, prompt gaps) to `.hool/operations/needs-human-review.md`
 
 Governor rules use severity tags: `[CRITICAL]` (must never happen even once), `[HIGH]`, `[MEDIUM]`.
 
@@ -203,10 +203,10 @@ Governor rules use severity tags: `[CRITICAL]` (must never happen even once), `[
 ## Autonomy Principle
 
 - Measurable -> autonomous
-- Subjective -> escalate to `operations/needs-human-review.md`
-- Process/rule change suggestion -> escalate to `operations/needs-human-review.md`
+- Subjective -> escalate to `.hool/operations/needs-human-review.md`
+- Process/rule change suggestion -> escalate to `.hool/operations/needs-human-review.md`
   - Agents NEVER modify their own prompts or rules
-  - If an agent believes its process should change, it logs the suggestion to `operations/needs-human-review.md` for human review
+  - If an agent believes its process should change, it logs the suggestion to `.hool/operations/needs-human-review.md` for human review
 
 ## MCP Tools Available
 

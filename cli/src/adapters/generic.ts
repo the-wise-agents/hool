@@ -21,9 +21,9 @@ This prompt tells the agent:
 
 ## On Every Session
 
-1. Read \`operations/current-phase.md\` — know where you are
-2. Read \`operations/task-board.md\` — know what's in flight
-3. Read \`memory/product-lead/hot.md\` — your recent context
+1. Read \`.hool/operations/current-phase.md\` — know where you are
+2. Read \`.hool/operations/task-board.md\` — know what's in flight
+3. Read \`.hool/memory/product-lead/hot.md\` — your recent context
 4. Follow the process in \`.hool/prompts/orchestrator.md\`
 
 ## MCP Servers

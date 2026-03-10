@@ -1,0 +1,458 @@
+#!/bin/bash
+# HOOL Framework Tests — validates scaffolded project structure
+# Run: cd /tmp/hool-test-project && bash tests/hool-framework.test.sh
+
+PROJECT_ROOT="/tmp/hool-test-project"
+cd "$PROJECT_ROOT"
+
+PASS=0
+FAIL=0
+TOTAL=0
+
+pass() {
+  PASS=$((PASS + 1))
+  TOTAL=$((TOTAL + 1))
+  echo "  PASS: $1"
+}
+
+fail() {
+  FAIL=$((FAIL + 1))
+  TOTAL=$((TOTAL + 1))
+  echo "  FAIL: $1"
+  [ -n "$2" ] && echo "        $2"
+}
+
+section() {
+  echo ""
+  echo "=== $1 ==="
+}
+
+# ============================================================
+section "1. FILE STRUCTURE — .hool/ directory"
+# ============================================================
+
+# 1.1 Core directories
+for dir in .hool/operations .hool/memory .hool/phases .hool/hooks .hool/prompts .hool/logs .hool/metrics; do
+  if [ -d "$dir" ]; then
+    pass "$dir exists"
+  else
+    fail "$dir missing"
+  fi
+done
+
+# 1.2 Phase directories
+for dir in .hool/phases/00-init .hool/phases/01-brainstorm .hool/phases/02-spec/features .hool/phases/03-design/cards .hool/phases/03-design/flows .hool/phases/04-architecture/contracts .hool/phases/04-architecture/flows .hool/phases/04-architecture/fe .hool/phases/04-architecture/be .hool/phases/05-fe-scaffold/pages .hool/phases/06-be-scaffold/services .hool/phases/07-test-plan/cases; do
+  if [ -d "$dir" ]; then
+    pass "$dir exists"
+  else
+    fail "$dir missing"
+  fi
+done
+
+# 1.3 Operations files
+for f in current-phase.md task-board.md bugs.md issues.md inconsistencies.md needs-human-review.md client-preferences.md governor-rules.md governor-log.md; do
+  if [ -f ".hool/operations/$f" ]; then
+    pass ".hool/operations/$f exists"
+  else
+    fail ".hool/operations/$f missing"
+  fi
+done
+
+# 1.4 Operations subdirs
+for dir in .hool/operations/context .hool/operations/dispatch; do
+  if [ -d "$dir" ]; then
+    pass "$dir exists"
+  else
+    fail "$dir missing"
+  fi
+done
+
+# 1.5 Memory directories (all 8 agents)
+for agent in product-lead fe-tech-lead be-tech-lead fe-dev be-dev qa forensic governor; do
+  if [ -d ".hool/memory/$agent" ]; then
+    pass ".hool/memory/$agent exists"
+  else
+    fail ".hool/memory/$agent missing"
+  fi
+  for f in hot.md cold.md best-practices.md issues.md governor-feedback.md; do
+    if [ -f ".hool/memory/$agent/$f" ]; then
+      pass ".hool/memory/$agent/$f exists"
+    else
+      fail ".hool/memory/$agent/$f missing"
+    fi
+  done
+done
+
+# 1.6 Project profile
+if [ -f ".hool/phases/00-init/project-profile.md" ]; then
+  pass "project-profile.md exists"
+  if grep -q "web-app" .hool/phases/00-init/project-profile.md; then
+    pass "project-profile.md has correct type"
+  else
+    fail "project-profile.md missing type" "$(head -3 .hool/phases/00-init/project-profile.md)"
+  fi
+else
+  fail "project-profile.md missing"
+fi
+
+# 1.7 Prompts copied
+if [ -f ".hool/prompts/orchestrator.md" ]; then
+  pass "orchestrator.md copied"
+else
+  fail "orchestrator.md missing"
+fi
+
+for agent in 05-fe-tech-lead 06-be-tech-lead 08-be-dev 08-fe-dev 10-qa 11-forensic governor; do
+  if [ -f ".hool/prompts/agents/$agent.md" ]; then
+    pass ".hool/prompts/agents/$agent.md copied"
+  else
+    fail ".hool/prompts/agents/$agent.md missing"
+  fi
+done
+
+# 1.8 Manifests
+if [ -f ".hool/agents.json" ]; then
+  pass "agents.json exists"
+else
+  fail "agents.json missing"
+fi
+
+if [ -f ".hool/mcps.json" ]; then
+  pass "mcps.json exists"
+else
+  fail "mcps.json missing"
+fi
+
+# ============================================================
+section "2. CLAUDE CODE AGENT DEFINITIONS"
+# ============================================================
+
+# 2.1 All 7 agent files exist
+for agent in be-dev be-tech-lead fe-dev fe-tech-lead qa forensic governor; do
+  if [ -f ".claude/agents/$agent.md" ]; then
+    pass ".claude/agents/$agent.md exists"
+  else
+    fail ".claude/agents/$agent.md missing"
+  fi
+done
+
+# 2.2 Agent frontmatter validation
+for agent in be-dev be-tech-lead fe-dev fe-tech-lead qa forensic governor; do
+  FILE=".claude/agents/$agent.md"
+  if head -1 "$FILE" | grep -q "^---"; then
+    pass "$agent has YAML frontmatter"
+  else
+    fail "$agent missing YAML frontmatter"
+  fi
+  if grep -q "^name:" "$FILE"; then
+    pass "$agent has name field"
+  else
+    fail "$agent missing name field"
+  fi
+  if grep -q "^description:" "$FILE"; then
+    pass "$agent has description field"
+  else
+    fail "$agent missing description field"
+  fi
+  if grep -q "^tools:" "$FILE"; then
+    pass "$agent has tools field"
+  else
+    fail "$agent missing tools field"
+  fi
+done
+
+# 2.3 Tool restrictions — devs should NOT have Agent tool
+for agent in be-dev fe-dev; do
+  if grep "^tools:" ".claude/agents/$agent.md" | grep -q "Agent"; then
+    fail "$agent has Agent tool (should not)" "$(grep '^tools:' .claude/agents/$agent.md)"
+  else
+    pass "$agent correctly lacks Agent tool"
+  fi
+done
+
+# 2.4 Tech leads SHOULD have Agent tool
+for agent in be-tech-lead fe-tech-lead; do
+  if grep "^tools:" ".claude/agents/$agent.md" | grep -q "Agent"; then
+    pass "$agent has Agent tool"
+  else
+    fail "$agent missing Agent tool"
+  fi
+done
+
+# 2.5 Forensic should be read-only (no Edit/Write)
+if grep "^tools:" ".claude/agents/forensic.md" | grep -qE "Edit|Write"; then
+  fail "forensic has Edit/Write tools (should not)"
+else
+  pass "forensic correctly read-only (no Edit/Write)"
+fi
+
+# 2.6 All agents reference .hool/ paths
+for agent in be-dev be-tech-lead fe-dev fe-tech-lead qa forensic governor; do
+  if grep -q '\.hool/' ".claude/agents/$agent.md"; then
+    pass "$agent references .hool/ paths"
+  else
+    fail "$agent missing .hool/ path references"
+  fi
+done
+
+# 2.7 All agents have Boot Sequence
+for agent in be-dev be-tech-lead fe-dev fe-tech-lead qa forensic governor; do
+  if grep -q "Boot Sequence" ".claude/agents/$agent.md"; then
+    pass "$agent has Boot Sequence"
+  else
+    fail "$agent missing Boot Sequence"
+  fi
+done
+
+# ============================================================
+section "3. HOOKS"
+# ============================================================
+
+# 3.1 Hook files exist and are executable
+for hook in block-pl-src-write.sh track-prompt-count.sh inject-pl-context.sh agent-checklist.sh; do
+  if [ -f ".hool/hooks/$hook" ]; then
+    pass "$hook exists"
+    if [ -x ".hool/hooks/$hook" ]; then
+      pass "$hook is executable"
+    else
+      fail "$hook not executable"
+    fi
+  else
+    fail "$hook missing"
+  fi
+done
+
+# 3.2 block-pl-src-write.sh blocks src/ writes
+echo '{"tool_name":"Write","tool_input":{"file_path":"src/backend/index.ts","content":"test"}}' | bash .hool/hooks/block-pl-src-write.sh > /dev/null 2>&1
+if [ $? -eq 2 ]; then
+  pass "block-pl-src-write.sh blocks src/ write (exit 2)"
+else
+  fail "block-pl-src-write.sh did not block src/ write"
+fi
+
+# 3.3 block-pl-src-write.sh allows .hool/ writes
+echo '{"tool_name":"Write","tool_input":{"file_path":".hool/operations/task-board.md","content":"test"}}' | bash .hool/hooks/block-pl-src-write.sh > /dev/null 2>&1
+if [ $? -eq 0 ]; then
+  pass "block-pl-src-write.sh allows .hool/ write (exit 0)"
+else
+  fail "block-pl-src-write.sh blocked .hool/ write incorrectly"
+fi
+
+# 3.4 block-pl-src-write.sh blocks tests/ writes
+echo '{"tool_name":"Write","tool_input":{"file_path":"tests/unit/test.ts","content":"test"}}' | bash .hool/hooks/block-pl-src-write.sh > /dev/null 2>&1
+if [ $? -eq 2 ]; then
+  pass "block-pl-src-write.sh blocks tests/ write (exit 2)"
+else
+  fail "block-pl-src-write.sh did not block tests/ write"
+fi
+
+# 3.5 track-prompt-count.sh increments dispatch counter
+rm -f .hool/metrics/dispatch-count.txt
+echo '{"tool_name":"Agent","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh > /dev/null 2>&1
+COUNT=$(cat .hool/metrics/dispatch-count.txt 2>/dev/null)
+if [ "$COUNT" = "1" ]; then
+  pass "track-prompt-count.sh increments to 1"
+else
+  fail "track-prompt-count.sh count wrong" "Expected 1, got: $COUNT"
+fi
+
+# 3.6 track-prompt-count.sh triggers governor at 3
+echo '{"tool_name":"Agent","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh > /dev/null 2>&1
+RESULT=$(echo '{"tool_name":"Agent","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh 2>/dev/null)
+COUNT=$(cat .hool/metrics/dispatch-count.txt 2>/dev/null)
+if [ "$COUNT" = "3" ]; then
+  pass "track-prompt-count.sh increments to 3"
+else
+  fail "track-prompt-count.sh count wrong at 3" "Expected 3, got: $COUNT"
+fi
+if echo "$RESULT" | grep -q "GOVERNOR CHECK"; then
+  pass "track-prompt-count.sh triggers governor at 3"
+else
+  fail "track-prompt-count.sh did not trigger governor at 3" "Got: $RESULT"
+fi
+
+# 3.7 inject-pl-context.sh outputs valid JSON
+RESULT=$(bash .hool/hooks/inject-pl-context.sh 2>/dev/null)
+if echo "$RESULT" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
+  pass "inject-pl-context.sh outputs valid JSON"
+else
+  fail "inject-pl-context.sh invalid JSON" "Got: $RESULT"
+fi
+
+# 3.8 inject-pl-context.sh includes PL context
+if echo "$RESULT" | grep -q "HOOL PRODUCT LEAD CONTEXT"; then
+  pass "inject-pl-context.sh includes PL context"
+else
+  fail "inject-pl-context.sh missing PL context"
+fi
+
+# ============================================================
+section "4. SETTINGS.JSON"
+# ============================================================
+
+if [ -f ".claude/settings.json" ]; then
+  pass ".claude/settings.json exists"
+else
+  fail ".claude/settings.json missing"
+fi
+
+# 4.1 Valid JSON
+if python3 -c "import json; json.load(open('.claude/settings.json'))" 2>/dev/null; then
+  pass "settings.json is valid JSON"
+else
+  fail "settings.json is invalid JSON"
+fi
+
+# 4.2 All hook events configured
+for event in PreToolUse PostToolUse UserPromptSubmit Stop SubagentStop; do
+  if grep -q "$event" .claude/settings.json; then
+    pass "$event hook configured"
+  else
+    fail "$event hook missing"
+  fi
+done
+
+# 4.3 All hook commands reference .hool/hooks/
+HOOK_PATHS=$(grep '"command":' .claude/settings.json | grep -v ".hool/hooks/" | grep -v '"type"' || true)
+if [ -z "$HOOK_PATHS" ]; then
+  pass "All hook commands reference .hool/hooks/"
+else
+  fail "Some hook commands don't reference .hool/hooks/" "$HOOK_PATHS"
+fi
+
+# ============================================================
+section "5. CLAUDE.MD"
+# ============================================================
+
+if [ -f "CLAUDE.md" ]; then
+  pass "CLAUDE.md exists"
+else
+  fail "CLAUDE.md missing"
+fi
+
+# 5.1 Has HOOL markers
+if grep -q "HOOL:START" CLAUDE.md; then
+  pass "CLAUDE.md has HOOL:START marker"
+else
+  fail "CLAUDE.md missing HOOL:START marker"
+fi
+
+if grep -q "HOOL:END" CLAUDE.md; then
+  pass "CLAUDE.md has HOOL:END marker"
+else
+  fail "CLAUDE.md missing HOOL:END marker"
+fi
+
+# 5.2 References .hool/ paths
+if grep -q '\.hool/operations/current-phase\.md' CLAUDE.md; then
+  pass "CLAUDE.md references .hool/operations/"
+else
+  fail "CLAUDE.md missing .hool/operations/ references"
+fi
+
+if grep -q '\.hool/memory/' CLAUDE.md; then
+  pass "CLAUDE.md references .hool/memory/"
+else
+  fail "CLAUDE.md missing .hool/memory/ references"
+fi
+
+# 5.3 References .claude/agents/ for dispatch
+if grep -q '\.claude/agents/' CLAUDE.md; then
+  pass "CLAUDE.md references .claude/agents/ for dispatch"
+else
+  fail "CLAUDE.md missing .claude/agents/ dispatch reference"
+fi
+
+# ============================================================
+section "6. PATH CONSISTENCY — no bare operations/, memory/, phases/"
+# ============================================================
+
+# Check that orchestrator.md uses .hool/ prefix consistently
+BARE_OPS=$(grep -c '`operations/' .hool/prompts/orchestrator.md 2>/dev/null | tr -d '\n' || echo "0")
+HOOL_OPS=$(grep -c '\.hool/operations/' .hool/prompts/orchestrator.md 2>/dev/null | tr -d '\n' || echo "0")
+if [ "$BARE_OPS" -eq 0 ] && [ "$HOOL_OPS" -gt 0 ]; then
+  pass "orchestrator.md: no bare operations/ paths ($HOOL_OPS .hool/ refs)"
+else
+  fail "orchestrator.md has $BARE_OPS bare operations/ paths"
+fi
+
+BARE_MEM=$(grep -c '`memory/' .hool/prompts/orchestrator.md 2>/dev/null | tr -d '\n' || echo "0")
+HOOL_MEM=$(grep -c '\.hool/memory/' .hool/prompts/orchestrator.md 2>/dev/null | tr -d '\n' || echo "0")
+if [ "$BARE_MEM" -eq 0 ] && [ "$HOOL_MEM" -gt 0 ]; then
+  pass "orchestrator.md: no bare memory/ paths ($HOOL_MEM .hool/ refs)"
+else
+  fail "orchestrator.md has $BARE_MEM bare memory/ paths"
+fi
+
+# Check agent definitions use .hool/ paths
+for agent in be-dev be-tech-lead fe-dev fe-tech-lead qa forensic governor; do
+  BARE=$(grep -cE '`(operations|memory|phases)/' ".claude/agents/$agent.md" 2>/dev/null || echo "0")
+  HOOL=$(grep -c '\.hool/' ".claude/agents/$agent.md" 2>/dev/null || echo "0")
+  if [ "$HOOL" -gt 0 ]; then
+    pass "$agent agent def uses .hool/ paths ($HOOL refs)"
+  else
+    fail "$agent agent def missing .hool/ paths"
+  fi
+done
+
+# Check agents.json uses .hool/ paths for memory
+if grep -q '\.hool/memory/' .hool/agents.json; then
+  pass "agents.json uses .hool/memory/ paths"
+else
+  fail "agents.json has bare memory/ paths"
+fi
+
+# ============================================================
+section "7. AGENTS.JSON MANIFEST"
+# ============================================================
+
+if python3 -c "import json; json.load(open('.hool/agents.json'))" 2>/dev/null; then
+  pass "agents.json is valid JSON"
+else
+  fail "agents.json is invalid JSON"
+fi
+
+# 7.1 All agents present
+for agent in product-lead fe-tech-lead be-tech-lead fe-dev be-dev qa forensic governor; do
+  if grep -q "\"$agent\"" .hool/agents.json; then
+    pass "agents.json has $agent"
+  else
+    fail "agents.json missing $agent"
+  fi
+done
+
+# 7.2 Agent definitions reference .claude/agents/
+for agent in fe-tech-lead be-tech-lead fe-dev be-dev qa forensic governor; do
+  if grep -q "\.claude/agents/$agent\.md" .hool/agents.json; then
+    pass "agents.json $agent -> .claude/agents/$agent.md"
+  else
+    fail "agents.json $agent missing .claude/agents/ reference"
+  fi
+done
+
+# ============================================================
+section "8. NO OLD ROOT-LEVEL DIRS"
+# ============================================================
+
+for dir in operations memory phases; do
+  if [ -d "$PROJECT_ROOT/$dir" ]; then
+    fail "Old root-level $dir/ still exists (should be under .hool/)"
+  else
+    pass "No root-level $dir/ (correctly under .hool/)"
+  fi
+done
+
+# ============================================================
+# RESULTS
+# ============================================================
+echo ""
+echo "============================================="
+echo "RESULTS: $PASS passed, $FAIL failed, $TOTAL total"
+echo "============================================="
+
+if [ $FAIL -gt 0 ]; then
+  exit 1
+else
+  echo "ALL TESTS PASSED"
+  exit 0
+fi

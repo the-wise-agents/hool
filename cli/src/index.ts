@@ -6,7 +6,7 @@ import chalk from 'chalk';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
-import { scaffoldProject, scaffoldOnboard, reonboard, copyPrompts, writeMcpManifest, writeAgentManifest } from './core/scaffold.js';
+import { scaffoldProject, scaffoldOnboard, reonboard, copyPrompts, writeMcpManifest, writeAgentManifest, copyPlatformFiles } from './core/scaffold.js';
 import type { ExecutionMode } from './adapters/types.js';
 import { createAdapter } from './adapters/index.js';
 import { checkAndInstallMcps } from './mcps/installer.js';
@@ -20,21 +20,33 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 const { version: PKG_VERSION } = require('../package.json');
 
-// Prompts source: check bundled (npm install), then monorepo dev paths
-async function getPromptsSourceDir(): Promise<string> {
+// Template root: check monorepo dev paths first (hool-mini has agents/hooks/settings),
+// then bundled (npm install where prepublishOnly copies them alongside dist/).
+// Returns the directory that contains prompts/, agents/, hooks/, settings/
+async function getTemplateRootDir(): Promise<string> {
   const candidates = [
-    path.resolve(__dirname, '..', 'prompts'),  // npm: cli/dist/ -> cli/prompts/ (bundled)
-    path.resolve(__dirname, '..', '..', 'hool-mini', 'prompts'),  // dev: cli/src/ -> hool/hool-mini/prompts/
-    path.resolve(__dirname, '..', '..', '..', 'hool-mini', 'prompts'),  // dev: cli/dist/ -> hool/hool-mini/prompts/
+    path.resolve(__dirname, '..', '..', 'hool-mini'),  // dev: cli/src/ -> hool/hool-mini/
+    path.resolve(__dirname, '..', '..', '..', 'hool-mini'),  // dev: cli/dist/ -> hool/hool-mini/
+    path.resolve(__dirname, '..'),  // npm: cli/dist/ -> cli/ (bundled prompts/agents/hooks/settings alongside dist/)
   ];
   for (const dir of candidates) {
     try {
-      await fs.access(dir);
+      // Check for prompts/ AND agents/ to ensure it's a complete template root
+      await fs.access(path.join(dir, 'prompts'));
+      await fs.access(path.join(dir, 'agents'));
       return dir;
     } catch { /* not found, try next */ }
   }
-  return candidates[0]; // fallback — will fail with a clear error
+  // Fallback: just check prompts/ (handles incomplete bundles)
+  for (const dir of candidates) {
+    try {
+      await fs.access(path.join(dir, 'prompts'));
+      return dir;
+    } catch { /* not found, try next */ }
+  }
+  return candidates[0]; // last resort
 }
+
 
 const program = new Command();
 
@@ -92,7 +104,8 @@ program
     });
 
     const adapter = createAdapter(platform);
-    const promptsDir = await getPromptsSourceDir();
+    const templateRootDir = await getTemplateRootDir();
+    const promptsDir = path.join(templateRootDir, 'prompts');
     const config: AdapterConfig = {
       platform,
       projectType,
@@ -115,12 +128,21 @@ program
       console.log(chalk.yellow('  ⚠ Could not copy prompts (source not found). Copy them manually to .hool/prompts/'));
     }
 
-    // 5. Inject platform instructions
+    // 5. Copy platform-specific files (agents, hooks, settings)
+    console.log(chalk.dim('  Copying platform files (agents, hooks, settings)...'));
+    try {
+      await copyPlatformFiles(projectDir, templateRootDir, platform);
+      console.log(chalk.green(`  ✓ Platform files copied for ${platform}`));
+    } catch {
+      console.log(chalk.yellow(`  ⚠ Could not copy platform files (source not found).`));
+    }
+
+    // 6. Inject platform instructions
     console.log(chalk.dim(`  Configuring for ${platform}...`));
     await adapter.injectInstructions(config);
     console.log(chalk.green(`  ✓ ${platform} instructions injected`));
 
-    // 6. Check & install MCPs
+    // 7. Check & install MCPs
     if (platform !== 'generic') {
       console.log(chalk.dim('  Checking MCPs...'));
       const results = await checkAndInstallMcps(adapter, config);
@@ -187,7 +209,7 @@ program
       // Re-onboard: read existing mode from project profile, flip phase + prepend tasks
       let mode: ExecutionMode = 'interactive';
       try {
-        const profile = await fs.readFile(path.join(projectDir, 'phases/00-init/project-profile.md'), 'utf-8');
+        const profile = await fs.readFile(path.join(projectDir, '.hool/phases/00-init/project-profile.md'), 'utf-8');
         const match = profile.match(/\*\*Mode\*\*:\s*(\S+)/);
         if (match && (match[1] === 'interactive' || match[1] === 'full-hool')) {
           mode = match[1] as ExecutionMode;
@@ -238,7 +260,8 @@ program
       });
 
       const adapter = createAdapter(platform);
-      const promptsDir = await getPromptsSourceDir();
+      const templateRootDir = await getTemplateRootDir();
+      const promptsDir = path.join(templateRootDir, 'prompts');
       const config: AdapterConfig = {
         platform,
         projectType,
@@ -261,12 +284,21 @@ program
         console.log(chalk.yellow('  ⚠ Could not copy prompts (source not found). Copy them manually to .hool/prompts/'));
       }
 
-      // 6. Inject platform instructions
+      // 6. Copy platform-specific files (agents, hooks, settings)
+      console.log(chalk.dim('  Copying platform files (agents, hooks, settings)...'));
+      try {
+        await copyPlatformFiles(projectDir, templateRootDir, platform);
+        console.log(chalk.green(`  ✓ Platform files copied for ${platform}`));
+      } catch {
+        console.log(chalk.yellow(`  ⚠ Could not copy platform files (source not found).`));
+      }
+
+      // 7. Inject platform instructions
       console.log(chalk.dim(`  Configuring for ${platform}...`));
       await adapter.injectInstructions(config);
       console.log(chalk.green(`  ✓ ${platform} instructions injected`));
 
-      // 7. Check & install MCPs
+      // 8. Check & install MCPs
       if (platform !== 'generic') {
         console.log(chalk.dim('  Checking MCPs...'));
         const results = await checkAndInstallMcps(adapter, config);
@@ -338,10 +370,10 @@ program
     const projectDir = path.resolve(opts.dir);
 
     try {
-      const phase = await fs.readFile(path.join(projectDir, 'operations/current-phase.md'), 'utf-8');
-      const taskBoard = await fs.readFile(path.join(projectDir, 'operations/task-board.md'), 'utf-8');
-      const bugs = await fs.readFile(path.join(projectDir, 'operations/bugs.md'), 'utf-8');
-      const review = await fs.readFile(path.join(projectDir, 'operations/needs-human-review.md'), 'utf-8');
+      const phase = await fs.readFile(path.join(projectDir, '.hool/operations/current-phase.md'), 'utf-8');
+      const taskBoard = await fs.readFile(path.join(projectDir, '.hool/operations/task-board.md'), 'utf-8');
+      const bugs = await fs.readFile(path.join(projectDir, '.hool/operations/bugs.md'), 'utf-8');
+      const review = await fs.readFile(path.join(projectDir, '.hool/operations/needs-human-review.md'), 'utf-8');
 
       console.log(chalk.bold('\n  HOOL Status\n'));
       console.log(chalk.dim('  ── Phase ──'));
@@ -361,7 +393,7 @@ program
       console.log(`  ${needsReview ? chalk.yellow('⚠ Items pending review') : chalk.green('✓ Nothing pending')}`);
       console.log('');
     } catch {
-      console.log(chalk.red('\n  Not a HOOL project (operations/ not found). Run `hool init` first.\n'));
+      console.log(chalk.red('\n  Not a HOOL project (.hool/ not found). Run `hool init` first.\n'));
     }
   });
 
@@ -388,13 +420,13 @@ program
     const { getOperationTemplates, getMemoryHeaders } = await import('./core/templates.js');
     const opTemplates = getOperationTemplates();
     for (const [filename, content] of Object.entries(opTemplates)) {
-      await fs.writeFile(path.join(projectDir, 'operations', filename), content, 'utf-8');
+      await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
     }
 
     const agents = ['product-lead', 'fe-tech-lead', 'be-tech-lead', 'fe-dev', 'be-dev', 'qa', 'forensic', 'governor'];
     const memoryHeaders = getMemoryHeaders();
     for (const agent of agents) {
-      const agentDir = path.join(projectDir, 'memory', agent);
+      const agentDir = path.join(projectDir, '.hool/memory', agent);
       await fs.mkdir(agentDir, { recursive: true });
       for (const [filename, content] of Object.entries(memoryHeaders)) {
         await fs.writeFile(path.join(agentDir, filename), content, 'utf-8');
@@ -414,8 +446,8 @@ program
   .action(async (newMode: string | undefined, opts: { dir: string }) => {
     const projectDir = path.resolve(opts.dir);
 
-    const profilePath = path.join(projectDir, 'phases/00-init/project-profile.md');
-    const phasePath = path.join(projectDir, 'operations/current-phase.md');
+    const profilePath = path.join(projectDir, '.hool/phases/00-init/project-profile.md');
+    const phasePath = path.join(projectDir, '.hool/operations/current-phase.md');
 
     try {
       let profile = await fs.readFile(profilePath, 'utf-8');
