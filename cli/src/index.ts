@@ -376,18 +376,91 @@ program
       const review = await fs.readFile(path.join(projectDir, '.hool/operations/needs-human-review.md'), 'utf-8');
 
       console.log(chalk.bold('\n  HOOL Status\n'));
+
+      // Phase info
       console.log(chalk.dim('  ── Phase ──'));
       console.log('  ' + phase.split('\n').slice(0, 5).join('\n  '));
 
+      // Task summary with progress bar
       const pendingTasks = (taskBoard.match(/- \[ \]/g) || []).length;
       const completedTasks = (taskBoard.match(/- \[x\]/g) || []).length;
+      const totalTasks = pendingTasks + completedTasks;
+      const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+      const barLen = 20;
+      const filled = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * barLen) : 0;
+      const bar = chalk.green('█'.repeat(filled)) + chalk.dim('░'.repeat(barLen - filled));
+
       console.log(chalk.dim('\n  ── Tasks ──'));
+      console.log(`  ${bar} ${pct}% (${completedTasks}/${totalTasks})`);
       console.log(`  Pending: ${pendingTasks}  Completed: ${completedTasks}`);
 
-      const bugCount = (bugs.match(/## BUG-/g) || []).length;
-      console.log(chalk.dim('\n  ── Bugs ──'));
-      console.log(`  Open: ${bugCount}`);
+      // Parse tasks by agent for parallel visualization
+      const taskLines = taskBoard.split('\n').filter(l => /^- \[[ x]\]/.test(l));
+      const agentTasks: Record<string, { pending: number; done: number }> = {};
+      for (const line of taskLines) {
+        const agentMatch = line.match(/assigned:\s*(\S+)/);
+        if (agentMatch) {
+          const agent = agentMatch[1];
+          if (!agentTasks[agent]) agentTasks[agent] = { pending: 0, done: 0 };
+          if (line.startsWith('- [x]')) {
+            agentTasks[agent].done++;
+          } else {
+            agentTasks[agent].pending++;
+          }
+        }
+      }
 
+      if (Object.keys(agentTasks).length > 0) {
+        console.log(chalk.dim('\n  ── Agent Progress ──'));
+        const maxNameLen = Math.max(...Object.keys(agentTasks).map(n => n.length));
+        for (const [agent, counts] of Object.entries(agentTasks)) {
+          const aTotal = counts.pending + counts.done;
+          const aPct = aTotal > 0 ? Math.round((counts.done / aTotal) * 100) : 0;
+          const aFilled = aTotal > 0 ? Math.round((counts.done / aTotal) * 10) : 0;
+          const aBar = chalk.green('█'.repeat(aFilled)) + chalk.dim('░'.repeat(10 - aFilled));
+          const status = counts.pending === 0 && counts.done > 0
+            ? chalk.green('✓')
+            : counts.pending > 0
+              ? chalk.yellow('…')
+              : ' ';
+          console.log(`  ${status} ${agent.padEnd(maxNameLen)}  ${aBar} ${String(aPct).padStart(3)}% (${counts.done}/${aTotal})`);
+        }
+      }
+
+      // Bugs
+      const openBugs = (bugs.match(/Status: open/g) || []).length;
+      const totalBugs = (bugs.match(/## BUG-/g) || []).length;
+      console.log(chalk.dim('\n  ── Bugs ──'));
+      if (totalBugs === 0) {
+        console.log(`  ${chalk.green('✓')} No bugs`);
+      } else {
+        console.log(`  Open: ${openBugs > 0 ? chalk.red(openBugs) : chalk.green(0)}  Total: ${totalBugs}`);
+      }
+
+      // Inconsistencies
+      let inconsistencies = 0;
+      try {
+        const incFile = await fs.readFile(path.join(projectDir, '.hool/operations/inconsistencies.md'), 'utf-8');
+        inconsistencies = (incFile.match(/^- /gm) || []).length;
+      } catch { /* file might not exist */ }
+      if (inconsistencies > 0) {
+        console.log(chalk.dim('\n  ── Inconsistencies ──'));
+        console.log(`  ${chalk.yellow(inconsistencies)} unresolved`);
+      }
+
+      // Governor
+      let dispatchCount = 0;
+      try {
+        const dc = await fs.readFile(path.join(projectDir, '.hool/metrics/dispatch-count.txt'), 'utf-8');
+        dispatchCount = parseInt(dc.trim()) || 0;
+      } catch { /* file might not exist */ }
+      if (dispatchCount > 0) {
+        const sinceLastAudit = dispatchCount % 3;
+        console.log(chalk.dim('\n  ── Governor ──'));
+        console.log(`  Dispatches: ${dispatchCount}  Since last audit: ${sinceLastAudit}/3${sinceLastAudit >= 2 ? chalk.yellow(' (audit due)') : ''}`);
+      }
+
+      // Human review
       const needsReview = !review.includes('Nothing pending');
       console.log(chalk.dim('\n  ── Human Review ──'));
       console.log(`  ${needsReview ? chalk.yellow('⚠ Items pending review') : chalk.green('✓ Nothing pending')}`);

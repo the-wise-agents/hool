@@ -538,6 +538,342 @@ for dir in operations memory phases; do
 done
 
 # ============================================================
+section "9. V0.6 FEATURES"
+# ============================================================
+
+# 9.1 Progressive workflow in orchestrator
+if grep -q "Complexity Classification" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+  pass "Orchestrator has complexity classification section"
+else
+  fail "Orchestrator missing complexity classification"
+fi
+
+for tier in "Trivial" "Small" "Medium" "Large"; do
+  if grep -q "$tier" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+    pass "Orchestrator has $tier complexity tier"
+  else
+    fail "Orchestrator missing $tier complexity tier"
+  fi
+done
+
+# 9.2 Ship flow in orchestrator
+if grep -q "Ship Flow" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+  pass "Orchestrator has ship flow section"
+else
+  fail "Orchestrator missing ship flow"
+fi
+
+# 9.3 Nudge system in orchestrator
+if grep -q "Nudge System" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+  pass "Orchestrator has nudge system section"
+else
+  fail "Orchestrator missing nudge system"
+fi
+
+if grep -q "Interactive Mode Nudges" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+  pass "Orchestrator has interactive mode nudges"
+else
+  fail "Orchestrator missing interactive mode nudges"
+fi
+
+if grep -q "Full-HOOL Mode Nudges" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+  pass "Orchestrator has full-hool mode nudges"
+else
+  fail "Orchestrator missing full-hool mode nudges"
+fi
+
+# 9.4 TDD enforcement in dev prompts
+for agent in "08-fe-dev" "08-be-dev"; do
+  if grep -q "Test Execution Requirement" "$PROJECT_ROOT/.hool/prompts/agents/${agent}.md" 2>/dev/null; then
+    pass "$agent has test execution requirement"
+  else
+    fail "$agent missing test execution requirement"
+  fi
+  if grep -qi "paste the actual terminal output" "$PROJECT_ROOT/.hool/prompts/agents/${agent}.md" 2>/dev/null; then
+    pass "$agent requires pasted terminal output"
+  else
+    fail "$agent missing paste terminal output requirement"
+  fi
+done
+
+# 9.5 TDD enforcement in QA prompt
+if grep -q "MANDATORY.*paste actual output" "$PROJECT_ROOT/.hool/prompts/agents/10-qa.md" 2>/dev/null; then
+  pass "QA has mandatory test execution with pasted output"
+else
+  fail "QA missing mandatory test execution requirement"
+fi
+
+# 9.6 TDD governor rule
+if grep -q "MUST run actual test commands" "$PROJECT_ROOT/.hool/operations/governor-rules.md" 2>/dev/null; then
+  pass "Governor rules include TDD enforcement"
+else
+  fail "Governor rules missing TDD enforcement"
+fi
+
+# 9.7 Governor cross-agent pattern detection
+if grep -q "Cross-agent pattern detection" "$PROJECT_ROOT/.hool/prompts/agents/governor.md" 2>/dev/null; then
+  pass "Governor has cross-agent pattern detection"
+else
+  fail "Governor missing cross-agent pattern detection"
+fi
+
+if grep -q "CROSS-AGENT" "$PROJECT_ROOT/.hool/prompts/agents/governor.md" 2>/dev/null; then
+  pass "Governor has CROSS-AGENT tag"
+else
+  fail "Governor missing CROSS-AGENT tag"
+fi
+
+# 9.8 Governor re-dispatch in orchestrator
+if grep -q "Immediately re-dispatch the violating agent" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+  pass "Orchestrator has governor re-dispatch directive"
+else
+  fail "Orchestrator missing governor re-dispatch"
+fi
+
+# 9.9 Baseline review checklist
+if [ -f "$PROJECT_ROOT/.hool/prompts/checklists/code-review.md" ]; then
+  pass "Code review checklist exists"
+else
+  fail "Code review checklist missing"
+fi
+
+for category in "Security" "API Design" "Performance" "Accessibility" "Code Quality"; do
+  if grep -q "## $category" "$PROJECT_ROOT/.hool/prompts/checklists/code-review.md" 2>/dev/null; then
+    pass "Checklist has $category section"
+  else
+    fail "Checklist missing $category section"
+  fi
+done
+
+# 9.10 Checklist wired into Tech Lead prompts
+for agent in "05-fe-tech-lead" "06-be-tech-lead"; do
+  if grep -q "code-review.md" "$PROJECT_ROOT/.hool/prompts/agents/${agent}.md" 2>/dev/null; then
+    pass "$agent references code-review checklist"
+  else
+    fail "$agent missing code-review checklist reference"
+  fi
+done
+
+# 9.11 QA scoring rubric
+if grep -q "QA Scoring Rubric" "$PROJECT_ROOT/.hool/prompts/agents/10-qa.md" 2>/dev/null; then
+  pass "QA has scoring rubric"
+else
+  fail "QA missing scoring rubric"
+fi
+
+for category in "Functional correctness" "Test coverage" "Edge cases" "Visual fidelity" "Exploratory findings"; do
+  if grep -q "$category" "$PROJECT_ROOT/.hool/prompts/agents/10-qa.md" 2>/dev/null; then
+    pass "QA rubric has $category"
+  else
+    fail "QA rubric missing $category"
+  fi
+done
+
+if grep -q "QA-SCORE" "$PROJECT_ROOT/.hool/prompts/agents/10-qa.md" 2>/dev/null; then
+  pass "QA has QA-SCORE work log tag"
+else
+  fail "QA missing QA-SCORE tag"
+fi
+
+# 9.12 inject-pl-context.sh has nudge data
+HOOK_SOURCE=".hool/hooks/inject-pl-context.sh"
+if grep -q "NUDGE" "$HOOK_SOURCE" 2>/dev/null; then
+  pass "inject-pl-context.sh has nudge logic"
+else
+  fail "inject-pl-context.sh missing nudge logic"
+fi
+
+if grep -q "MODE=" "$HOOK_SOURCE" 2>/dev/null; then
+  pass "inject-pl-context.sh detects execution mode"
+else
+  fail "inject-pl-context.sh missing mode detection"
+fi
+
+if grep -q "PROGRESS" "$HOOK_SOURCE" 2>/dev/null; then
+  pass "inject-pl-context.sh has progress tracking"
+else
+  fail "inject-pl-context.sh missing progress tracking"
+fi
+
+if grep -q "Classify request complexity" "$HOOK_SOURCE" 2>/dev/null; then
+  pass "inject-pl-context.sh includes complexity classification rule"
+else
+  fail "inject-pl-context.sh missing complexity classification rule"
+fi
+
+# ============================================================
+# 10. HOOL STATUS CLI
+# ============================================================
+section "10. hool status CLI"
+
+# Resolve CLI path (relative to the test project's parent)
+HOOL_CLI="$(cd /Users/apple/Documents/personal\ projects/hool && pwd)/cli/dist/index.js"
+
+# 10.1 hool status runs without error
+STATUS_OUTPUT=$(node "$HOOL_CLI" status -d "$PROJECT_ROOT" 2>&1)
+if [ $? -eq 0 ]; then
+  pass "hool status exits cleanly"
+else
+  fail "hool status failed" "$STATUS_OUTPUT"
+fi
+
+# 10.2 Shows phase info
+if echo "$STATUS_OUTPUT" | grep -q "Phase"; then
+  pass "hool status shows phase info"
+else
+  fail "hool status missing phase info"
+fi
+
+# 10.3 Shows progress bar (░ or █ characters)
+if echo "$STATUS_OUTPUT" | grep -qE '[█░]'; then
+  pass "hool status shows progress bar"
+else
+  fail "hool status missing progress bar"
+fi
+
+# 10.4 Shows task counts
+if echo "$STATUS_OUTPUT" | grep -qE '[0-9]+/[0-9]+'; then
+  pass "hool status shows task counts (X/Y format)"
+else
+  fail "hool status missing task counts"
+fi
+
+# 10.5 Shows pending/completed counts
+if echo "$STATUS_OUTPUT" | grep -q "Pending:"; then
+  pass "hool status shows pending count"
+else
+  fail "hool status missing pending count"
+fi
+
+# 10.6 Shows bug section
+if echo "$STATUS_OUTPUT" | grep -qi "bug"; then
+  pass "hool status shows bug section"
+else
+  fail "hool status missing bug section"
+fi
+
+# 10.7 Shows human review section
+if echo "$STATUS_OUTPUT" | grep -qi "Human Review"; then
+  pass "hool status shows human review section"
+else
+  fail "hool status missing human review section"
+fi
+
+# 10.8 Agent progress shown when tasks have assigned agents
+# The scaffolded task-board has assigned agents (product-lead for onboard tasks, or none for fresh)
+if echo "$STATUS_OUTPUT" | grep -qE "(Agent Progress|No bugs|Pending:)"; then
+  pass "hool status renders without crash on scaffolded project"
+else
+  fail "hool status output looks incomplete"
+fi
+
+# 10.9 Test with known bug entries
+cat > "$PROJECT_ROOT/.hool/operations/bugs.md" << 'BUGEOF'
+# Bug Tracker
+
+## BUG-001: Login button unresponsive
+- Status: open
+
+## BUG-002: CSS misalignment on mobile
+- Status: open
+
+## BUG-003: Fixed crash on submit
+- Status: resolved
+BUGEOF
+
+STATUS_WITH_BUGS=$(node "$HOOL_CLI" status -d "$PROJECT_ROOT" 2>&1)
+if echo "$STATUS_WITH_BUGS" | grep -q "Open:"; then
+  pass "hool status shows open bug count when bugs exist"
+else
+  fail "hool status missing open bug count with bugs"
+fi
+
+# 10.10 Test with dispatch count (governor audit tracking)
+mkdir -p "$PROJECT_ROOT/.hool/metrics"
+echo "5" > "$PROJECT_ROOT/.hool/metrics/dispatch-count.txt"
+STATUS_WITH_GOV=$(node "$HOOL_CLI" status -d "$PROJECT_ROOT" 2>&1)
+if echo "$STATUS_WITH_GOV" | grep -q "Dispatches:"; then
+  pass "hool status shows governor dispatch count"
+else
+  fail "hool status missing governor dispatch count"
+fi
+
+if echo "$STATUS_WITH_GOV" | grep -q "audit"; then
+  pass "hool status shows audit-due indicator"
+else
+  fail "hool status missing audit-due indicator"
+fi
+
+# 10.11 Test with inconsistencies
+cat > "$PROJECT_ROOT/.hool/operations/inconsistencies.md" << 'INCEOF'
+# Inconsistencies
+
+- INC-001: spec says email required, contract says optional
+- INC-002: schema missing index on users.email
+INCEOF
+
+STATUS_WITH_INC=$(node "$HOOL_CLI" status -d "$PROJECT_ROOT" 2>&1)
+if echo "$STATUS_WITH_INC" | grep -qi "inconsistenc"; then
+  pass "hool status shows inconsistencies when present"
+else
+  fail "hool status missing inconsistencies section"
+fi
+
+# 10.12 Per-agent progress with known task board
+cat > "$PROJECT_ROOT/.hool/operations/task-board.md" << 'TBEOF'
+# Task Board
+
+## Active Tasks
+- [ ] TASK-001: implement login | assigned: be-dev | files: src/backend/auth
+- [ ] TASK-002: implement signup | assigned: be-dev | files: src/backend/auth
+- [x] TASK-003: scaffold routes | assigned: be-tech-lead | files: src/backend/routes
+- [ ] TASK-004: login page | assigned: fe-dev | files: src/frontend/pages
+- [x] TASK-005: design system | assigned: fe-tech-lead | files: src/frontend/design
+
+## Completed Tasks
+_None._
+TBEOF
+
+STATUS_AGENTS=$(node "$HOOL_CLI" status -d "$PROJECT_ROOT" 2>&1)
+if echo "$STATUS_AGENTS" | grep -q "Agent Progress"; then
+  pass "hool status shows agent progress section"
+else
+  fail "hool status missing agent progress section"
+fi
+
+if echo "$STATUS_AGENTS" | grep -q "be-dev"; then
+  pass "hool status shows be-dev agent"
+else
+  fail "hool status missing be-dev in agent progress"
+fi
+
+if echo "$STATUS_AGENTS" | grep -q "fe-dev"; then
+  pass "hool status shows fe-dev agent"
+else
+  fail "hool status missing fe-dev in agent progress"
+fi
+
+# 10.13 Progress percentage is correct (2 done / 5 total = 40%)
+if echo "$STATUS_AGENTS" | grep -q "40%"; then
+  pass "hool status shows correct overall progress percentage"
+else
+  fail "hool status wrong progress percentage" "Expected 40%, got: $(echo "$STATUS_AGENTS" | grep '%')"
+fi
+
+# Restore original files
+cat > "$PROJECT_ROOT/.hool/operations/bugs.md" << 'EOF'
+# Bug Tracker
+
+_No bugs reported yet._
+EOF
+cat > "$PROJECT_ROOT/.hool/operations/inconsistencies.md" << 'EOF'
+# Inconsistencies
+
+_No inconsistencies found yet._
+EOF
+rm -f "$PROJECT_ROOT/.hool/metrics/dispatch-count.txt"
+
+# ============================================================
 # RESULTS
 # ============================================================
 echo ""

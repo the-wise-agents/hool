@@ -157,11 +157,15 @@ Order matters. List in execution order:
 - .hool/phases/02-spec/spec.md (and features/ if split) — acceptance criteria check
 - .hool/phases/07-test-plan/test-plan.md — test coverage check
 - .hool/memory/be-dev/hot.md — what BE Dev has been doing
+- .hool/prompts/checklists/code-review.md — baseline review checklist (security, performance, a11y, API design)
+- .hool/memory/be-tech-lead/best-practices.md — project-specific patterns (organic checklist items)
 ### Writes
 - .hool/operations/inconsistencies.md — INC-XXX entries for any issues found
 ### Process
 1. Read the code BE Dev produced for the task
-2. Run the 6-point review checklist:
+2. Load and run the baseline checklist from `.hool/prompts/checklists/code-review.md` (skip FE-only items)
+3. Also check project-specific patterns from your `best-practices.md`
+4. Run the 6-point review checklist:
    - **Contract compliance** — response shapes, status codes, error codes match .hool/phases/04-architecture/contracts/ exactly
    - **Schema compliance** — queries are correct, indexes are used, transactions where needed per .hool/phases/04-architecture/schema.md
    - **LLD compliance** — directory structure, service/controller pattern, conventions from .hool/phases/06-be-scaffold/be-lld.md followed

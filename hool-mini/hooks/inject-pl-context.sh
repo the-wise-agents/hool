@@ -90,8 +90,50 @@ if [ "$DISPATCH_COUNT" -gt 0 ] && [ $(( DISPATCH_COUNT % 3 )) -ge 2 ]; then
   GOVERNOR_DUE=" Governor audit due after next dispatch."
 fi
 
+# Calculate progress percentage for current phase
+COMPLETED=0
+TOTAL=0
+if [ -f "$PROJECT_ROOT/.hool/operations/task-board.md" ]; then
+  COMPLETED=$(grep -c '^\- \[x\]' "$PROJECT_ROOT/.hool/operations/task-board.md" 2>/dev/null || echo "0")
+  TOTAL=$(( PENDING + COMPLETED ))
+fi
+PROGRESS=""
+if [ "$TOTAL" -gt 0 ]; then
+  PCT=$(( COMPLETED * 100 / TOTAL ))
+  PROGRESS=" Progress: ${COMPLETED}/${TOTAL} (${PCT}%)"
+fi
+
+# Check for open bugs
+OPEN_BUGS=0
+if [ -f "$PROJECT_ROOT/.hool/operations/bugs.md" ]; then
+  OPEN_BUGS=$(grep -c 'Status: open' "$PROJECT_ROOT/.hool/operations/bugs.md" 2>/dev/null || echo "0")
+fi
+BUG_INFO=""
+if [ "$OPEN_BUGS" -gt 0 ]; then
+  BUG_INFO=" Open bugs: ${OPEN_BUGS}."
+fi
+
+# Check execution mode for nudge behavior
+MODE="interactive"
+if [ -f "$PROJECT_ROOT/.hool/phases/00-init/project-profile.md" ]; then
+  MODE_LINE=$(grep -i 'mode' "$PROJECT_ROOT/.hool/phases/00-init/project-profile.md" 2>/dev/null | head -1)
+  if echo "$MODE_LINE" | grep -qi 'full-hool'; then
+    MODE="full-hool"
+  fi
+fi
+
+# Build nudge hint based on state
+NUDGE=""
+if [ "$PENDING" -eq 0 ] && [ "$COMPLETED" -gt 0 ]; then
+  NUDGE=" NUDGE: No pending tasks — check phase gate conditions and advance if met."
+elif [ "$REVIEW_ITEMS" -gt 0 ] && [ "$MODE" = "interactive" ]; then
+  NUDGE=" NUDGE: ${REVIEW_ITEMS} items need human review — present them to user."
+elif [ "$OPEN_BUGS" -ge 5 ]; then
+  NUDGE=" NUDGE: 5+ open bugs — consider running a mini-retro."
+fi
+
 # Build context as a single line (JSON-safe)
-CONTEXT="HOOL PRODUCT LEAD CONTEXT | Current: ${PHASE} | Pending tasks: ${PENDING} | Human review: ${REVIEW_ITEMS} | Inconsistencies: ${INCONSISTENCIES} | Dispatches: ${DISPATCH_COUNT}${GOVERNOR_DUE} | ${PHASE_GUIDANCE} | RULES: (1) NEVER edit src/ or tests/ - dispatch agents (2) Read .hool/operations/current-phase.md and task-board.md FIRST (3) All state in .hool/ (4) After every 3 dispatches, run governor (5) No task too small for dispatch (6) If pending tasks, tell user and ask to proceed"
+CONTEXT="HOOL PRODUCT LEAD CONTEXT | Current: ${PHASE} | Mode: ${MODE} | Pending tasks: ${PENDING}${PROGRESS} | Human review: ${REVIEW_ITEMS} | Inconsistencies: ${INCONSISTENCIES} | Dispatches: ${DISPATCH_COUNT}${GOVERNOR_DUE}${BUG_INFO}${NUDGE} | ${PHASE_GUIDANCE} | RULES: (1) NEVER edit src/ or tests/ - dispatch agents (2) Read .hool/operations/current-phase.md and task-board.md FIRST (3) All state in .hool/ (4) After every 3 dispatches, run governor (5) No task too small for dispatch (6) If pending tasks, tell user and ask to proceed (7) Classify request complexity before routing (trivial/small/medium/large) (8) Nudge: in interactive mode SUGGEST next action, in full-hool mode ACT on it"
 
 # Output valid JSON
 printf '{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"%s"}}\n' "$CONTEXT"

@@ -48,6 +48,11 @@ On each invocation:
 4. **Check for repeated mistakes**:
    - Same type of error appearing 2+ times across agents or within one agent
    - Patterns that suggest a systemic issue (e.g., agents consistently missing a check)
+5. **Cross-agent pattern detection**:
+   - Compare findings across ALL agents' cold logs — do 2+ agents hit the same gotcha or make the same mistake?
+   - If a pattern spans multiple agents, it's likely a systemic issue (bad contract, unclear spec, missing rule)
+   - Log cross-agent patterns with `[CROSS-AGENT]` tag and escalate to `.hool/operations/needs-human-review.md`
+   - Example: if both FE Dev and BE Dev misinterpret the same contract field → the contract is ambiguous, not the agents
 5. **Check for critical one-time violations**:
    - Rules in `governor-rules.md` tagged `[CRITICAL]` — these must never happen even once
 6. **Write findings** to `.hool/operations/governor-log.md`
@@ -97,10 +102,11 @@ The governor is invoked:
 ## Work Log Tags
 
 ```
-[AUDIT]     — routine audit completed
-[VIOLATION] — rule violation detected
-[PATTERN]   — repeated mistake pattern identified
-[RULE-ADD]  — new rule appended to governor-rules.md
-[FEEDBACK]  — corrective feedback written to agent
-[ESCALATE]  — structural issue escalated to human
+[AUDIT]       — routine audit completed
+[VIOLATION]   — rule violation detected
+[PATTERN]     — repeated mistake pattern identified
+[CROSS-AGENT] — same issue detected across 2+ agents (systemic)
+[RULE-ADD]    — new rule appended to governor-rules.md
+[FEEDBACK]    — corrective feedback written to agent
+[ESCALATE]    — structural issue escalated to human
 ```

@@ -59,6 +59,27 @@ If you believe your own process or rules should change based on experience, esca
 8. **Small commits**: Each task = one logical unit of work.
 9. **Consistency gate**: Before implementing, cross-check your task against contracts, design cards, and spec. If you find ANY inconsistency between docs, DO NOT proceed — log to .hool/operations/inconsistencies.md.
 
+## Test Execution Requirement (MANDATORY)
+
+**You MUST actually run tests and paste the terminal output.** Describing tests or saying "tests pass" without evidence is a governor violation.
+
+1. After writing/updating tests, run them: execute the actual test command (e.g., `npm test`, `npx vitest run`, `npx jest`)
+2. **Paste the actual terminal output** showing pass/fail counts in your work log
+3. After implementation, run the FULL test suite (not just your tests): paste terminal output
+4. If tests fail: fix the code, re-run, paste the new output
+5. Your task is NOT complete until you have pasted passing test output
+
+**Example of required evidence:**
+```
+$ npm test
+ ✓ LoginForm renders correctly (12ms)
+ ✓ LoginForm validates email (8ms)
+ ✓ LoginForm submits credentials (15ms)
+ Tests: 3 passed, 3 total
+```
+
+**NOT acceptable:** "I wrote tests for LoginForm and they pass." (no terminal output = violation)
+
 ## FE-Specific Guidelines
 
 ### Components

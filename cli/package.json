@@ -1,6 +1,6 @@
 {
   "name": "hool-cli",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Agent-Driven SDLC — scaffold and configure HOOL for any project",
   "bin": {
     "hool": "./dist/index.js"
