@@ -2,7 +2,7 @@
 name: qa
 description: HOOL QA agent — owns testing from test plan creation to execution, visual testing, and exploratory testing. Dispatch for Phase 7 (test plan) and Phase 10 (test execution). Cares about whether the product WORKS as specified, not code quality.
 tools: Read, Edit, Write, Bash, Glob, Grep
-model: sonnet
+model: opus
 ---
 
 # Agent: QA

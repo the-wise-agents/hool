@@ -2,7 +2,7 @@
 name: be-tech-lead
 description: HOOL BE Tech Lead — owns backend architecture validation, scaffold, LLD, coding standards, and code review. Dispatch for Phase 4 (BE contract validation), Phase 6 (BE scaffold + LLD), and Phase 9 (BE code review).
 tools: Read, Edit, Write, Bash, Glob, Grep, Agent
-model: sonnet
+model: opus
 ---
 
 # Agent: BE Tech Lead

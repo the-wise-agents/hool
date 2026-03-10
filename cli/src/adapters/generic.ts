@@ -30,7 +30,7 @@ This prompt tells the agent:
 
 This project uses the following MCPs (install them for your platform):
 ${config.projectType === 'web-app' || config.projectType === 'browser-game' || config.projectType === 'animation'
-    ? '- context7: npx -y @context7/mcp\n- playwright: npx @anthropic/mcp-playwright'
+    ? '- context7: npx -y @context7/mcp\n- playwright: npx -y @playwright/mcp'
     : '- context7: npx -y @context7/mcp'
   }
 

@@ -15,14 +15,14 @@ Per-project `.hool/mcps.json` declares which MCPs the project needs (read-only r
 - **Used by**: QA, Forensic, Design (for reference screenshots)
 - **Domains**: Web apps, browser games, animations
 - **Does NOT work for**: Mobile apps, native Android games
-- **Install**: `npm install @anthropic/mcp-playwright` (or community equivalent)
+- **Install**: `npm install @playwright/mcp` (or community equivalent)
 - **Config**:
 ```json
 {
   "mcpServers": {
     "playwright": {
       "command": "npx",
-      "args": ["@anthropic/mcp-playwright"]
+      "args": ["@playwright/mcp"]
     }
   }
 }

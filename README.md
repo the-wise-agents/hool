@@ -71,41 +71,44 @@ Creates this structure in your project:
 
 ```
 your-project/
-  phases/                    # Phase documents (agents create these as they work)
-    00-init/
-    01-brainstorm/
-    02-spec/
-    03-design/
-    04-architecture/
-    05-fe-scaffold/
-    06-be-scaffold/
-    07-test-plan/
-  operations/                # Live project state
-    current-phase.md
-    task-board.md
-    bugs.md
-    issues.md
-    inconsistencies.md
-    needs-human-review.md
-    client-preferences.md     # User tech/product preferences (living doc)
-    governor-rules.md          # Hard rules enforced by Governor
-    governor-log.md            # Governor audit log
-    context/                   # Dispatch briefs for cross-agent context
-    dispatch/                  # Dispatch records
-  memory/                    # Per-agent memory (hot log, cold log, patterns)
-    product-lead/
-    fe-tech-lead/
-    be-tech-lead/
-    fe-dev/
-    be-dev/
-    qa/
-    forensic/
-    governor/
   .hool/
-    prompts/                 # Agent prompt templates
-    mcps.json                # MCP manifest
-    agents.json              # Agent manifest
-  CLAUDE.md                  # (claude-code) or .cursor/rules/hool.mdc (cursor)
+    phases/                    # Phase documents (agents create these as they work)
+      00-init/
+      01-brainstorm/
+      02-spec/
+      03-design/
+      04-architecture/
+      05-fe-scaffold/
+      06-be-scaffold/
+      07-test-plan/
+    operations/                # Live project state
+      current-phase.md
+      task-board.md
+      bugs.md
+      issues.md
+      inconsistencies.md
+      needs-human-review.md
+      client-preferences.md     # User tech/product preferences (living doc)
+      governor-rules.md          # Hard rules enforced by Governor
+      governor-log.md            # Governor audit log
+      context/                   # Dispatch briefs for cross-agent context
+      dispatch/                  # Dispatch records
+    memory/                    # Per-agent memory (hot log, cold log, patterns)
+      product-lead/
+      fe-tech-lead/
+      be-tech-lead/
+      fe-dev/
+      be-dev/
+      qa/
+      forensic/
+      governor/
+    prompts/                   # Agent prompt templates
+    hooks/                     # Platform hooks (PL context, governor trigger, etc.)
+    metrics/                   # Dispatch counts, session tracking
+    logs/                      # Agent execution logs
+    mcps.json                  # MCP manifest
+    agents.json                # Agent manifest
+  CLAUDE.md                    # (claude-code) or .cursor/rules/hool.mdc (cursor)
 ```
 
 Source code directories (`src/`, `tests/`, etc.) are NOT created by init — they're decided during the Architecture phase and scaffolded by Tech Leads.
@@ -139,7 +142,7 @@ HOOL uses these MCP servers (auto-installed during `hool init`):
 |-----|---------|---------|
 | [context7](https://github.com/upstash/context7) | Library documentation lookup | All project types |
 | [deepwiki](https://github.com/asyncfncom/deepwiki-mcp) | Research, architectural patterns | All project types |
-| [playwright](https://github.com/anthropics/anthropic-mcp-playwright) | E2E testing, screenshots | Web, game, animation |
+| [playwright](https://github.com/playwright-community/mcp) | E2E testing, screenshots | Web, game, animation |
 
 ## Commands
 

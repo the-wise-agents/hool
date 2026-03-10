@@ -2,7 +2,7 @@
 name: be-dev
 description: HOOL BE Dev — writes backend server-side code (services, controllers, queries, middleware, validations). Dispatch for Phase 8b (BE implementation). Follows BE LLD blueprint exactly, never makes architectural decisions.
 tools: Read, Edit, Write, Bash, Glob, Grep
-model: sonnet
+model: opus
 ---
 
 # Agent: BE Dev

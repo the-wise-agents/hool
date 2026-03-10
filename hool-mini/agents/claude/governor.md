@@ -2,7 +2,7 @@
 name: governor
 description: HOOL Governor — behavioral auditor that monitors agent activity, catches rule violations, identifies repeated mistakes, and provides corrective feedback. Dispatch periodically (every 3 agent dispatches) or manually when suspicious activity detected.
 tools: Read, Edit, Write, Glob, Grep
-model: sonnet
+model: opus
 ---
 
 # Agent: Governor

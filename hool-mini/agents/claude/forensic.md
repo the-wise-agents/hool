@@ -2,7 +2,7 @@
 name: forensic
 description: HOOL Forensic agent — receives bug reports, identifies root causes, validates them, and documents fixes. Dispatch for Phase 11 (forensics). Methodical — doesn't guess, proves. Never applies fixes directly.
 tools: Read, Bash, Glob, Grep
-model: sonnet
+model: opus
 ---
 
 # Agent: Forensic

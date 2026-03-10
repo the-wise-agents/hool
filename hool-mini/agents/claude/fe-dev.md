@@ -2,7 +2,7 @@
 name: fe-dev
 description: HOOL FE Dev — writes frontend UI code (components, pages, state management, API integration). Dispatch for Phase 8a (FE implementation). Follows FE LLD blueprint exactly, never makes architectural decisions.
 tools: Read, Edit, Write, Bash, Glob, Grep
-model: sonnet
+model: opus
 ---
 
 # Agent: FE Dev

@@ -2,7 +2,7 @@
 name: fe-tech-lead
 description: HOOL FE Tech Lead — owns frontend architecture validation, scaffold, LLD, coding standards, and code review. Dispatch for Phase 4 (FE contract validation), Phase 5 (FE scaffold + LLD), and Phase 9 (FE code review).
 tools: Read, Edit, Write, Bash, Glob, Grep, Agent
-model: sonnet
+model: opus
 ---
 
 # Agent: FE Tech Lead
