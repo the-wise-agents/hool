@@ -286,6 +286,101 @@ else
   fail "inject-pl-context.sh missing PL context"
 fi
 
+# 3.9 New hooks exist and are executable
+for hook in pre-compact.sh suggest-compact.sh session-start.sh run-if-profile.sh; do
+  if [ -f ".hool/hooks/$hook" ]; then
+    pass "$hook exists"
+    if [ -x ".hool/hooks/$hook" ]; then
+      pass "$hook is executable"
+    else
+      fail "$hook not executable"
+    fi
+  else
+    fail "$hook missing"
+  fi
+done
+
+# 3.10 pre-compact.sh creates snapshot and outputs JSON
+mkdir -p .hool/metrics/snapshots
+RESULT=$(bash .hool/hooks/pre-compact.sh 2>/dev/null)
+if echo "$RESULT" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
+  pass "pre-compact.sh outputs valid JSON"
+else
+  fail "pre-compact.sh invalid JSON" "Got: $RESULT"
+fi
+if echo "$RESULT" | grep -q "HOOL STATE SNAPSHOT"; then
+  pass "pre-compact.sh includes state snapshot context"
+else
+  fail "pre-compact.sh missing state snapshot context"
+fi
+# Check snapshot file was created
+SNAP_COUNT=$(ls .hool/metrics/snapshots/pre-compact-*.md 2>/dev/null | wc -l | tr -d ' ')
+if [ "$SNAP_COUNT" -gt 0 ]; then
+  pass "pre-compact.sh creates snapshot file"
+else
+  fail "pre-compact.sh did not create snapshot file"
+fi
+
+# 3.11 suggest-compact.sh tracks tool calls
+rm -f .hool/metrics/tool-call-count.txt
+bash .hool/hooks/suggest-compact.sh > /dev/null 2>&1
+COUNT=$(cat .hool/metrics/tool-call-count.txt 2>/dev/null | tr -d '\n')
+if [ "$COUNT" = "1" ]; then
+  pass "suggest-compact.sh increments tool call count"
+else
+  fail "suggest-compact.sh count wrong" "Expected 1, got: $COUNT"
+fi
+
+# 3.12 agent-checklist.sh outputs valid JSON (upgraded from plain text)
+RESULT=$(bash .hool/hooks/agent-checklist.sh 2>/dev/null)
+if echo "$RESULT" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
+  pass "agent-checklist.sh outputs valid JSON"
+else
+  fail "agent-checklist.sh invalid JSON" "Got: $RESULT"
+fi
+if echo "$RESULT" | grep -q "OPERATIONAL CHECKLIST"; then
+  pass "agent-checklist.sh includes checklist in JSON"
+else
+  fail "agent-checklist.sh missing checklist in JSON"
+fi
+
+# 3.13 inject-pl-context.sh includes phase-specific guidance
+if echo "$RESULT" | grep -q "additionalContext"; then
+  pass "agent-checklist.sh uses additionalContext field"
+else
+  fail "agent-checklist.sh missing additionalContext field"
+fi
+
+# 3.14 run-if-profile.sh passes through when profile doesn't match
+RESULT=$(echo "passthrough-test" | HOOL_HOOK_PROFILE=minimal bash .hool/hooks/run-if-profile.sh "strict" "echo should-not-run" 2>/dev/null)
+if [ "$RESULT" = "passthrough-test" ]; then
+  pass "run-if-profile.sh passes through on profile mismatch"
+else
+  fail "run-if-profile.sh did not pass through" "Got: $RESULT"
+fi
+
+# 3.15 settings.json includes PreCompact hook
+if grep -q "PreCompact" .claude/settings.json 2>/dev/null; then
+  pass "settings.json has PreCompact hook"
+else
+  fail "settings.json missing PreCompact hook"
+fi
+
+# 3.16 settings.json includes suggest-compact hook
+if grep -q "suggest-compact" .claude/settings.json 2>/dev/null; then
+  pass "settings.json has suggest-compact hook"
+else
+  fail "settings.json missing suggest-compact hook"
+fi
+
+# 3.17 settings.json has description fields on hooks
+DESC_COUNT=$(grep -c '"description"' .claude/settings.json 2>/dev/null | tr -d '\n' || echo "0")
+if [ "$DESC_COUNT" -ge 5 ]; then
+  pass "settings.json has descriptions on hooks ($DESC_COUNT)"
+else
+  fail "settings.json missing hook descriptions" "Expected >=5, got: $DESC_COUNT"
+fi
+
 # ============================================================
 section "4. SETTINGS.JSON"
 # ============================================================
@@ -304,7 +399,7 @@ else
 fi
 
 # 4.2 All hook events configured
-for event in PreToolUse PostToolUse UserPromptSubmit Stop SubagentStop; do
+for event in PreToolUse PostToolUse UserPromptSubmit PreCompact Stop SubagentStop; do
   if grep -q "$event" .claude/settings.json; then
     pass "$event hook configured"
   else

@@ -9,7 +9,19 @@
             "command": ".hool/hooks/block-pl-src-write.sh",
             "timeout": 5
           }
-        ]
+        ],
+        "description": "Block Product Lead from editing src/ or tests/ directly"
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".hool/hooks/suggest-compact.sh",
+            "timeout": 3
+          }
+        ],
+        "description": "Suggest strategic /compact at logical intervals"
       }
     ],
     "PostToolUse": [
@@ -21,7 +33,8 @@
             "command": ".hool/hooks/track-prompt-count.sh",
             "timeout": 5
           }
-        ]
+        ],
+        "description": "Track dispatch count, trigger governor every 3 dispatches"
       }
     ],
     "UserPromptSubmit": [
@@ -33,7 +46,21 @@
             "command": ".hool/hooks/inject-pl-context.sh",
             "timeout": 5
           }
-        ]
+        ],
+        "description": "Inject phase-aware PL context on every user prompt"
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".hool/hooks/pre-compact.sh",
+            "timeout": 10
+          }
+        ],
+        "description": "Save HOOL state snapshot before context compaction"
       }
     ],
     "Stop": [
@@ -45,7 +72,8 @@
             "command": ".hool/hooks/agent-checklist.sh",
             "timeout": 5
           }
-        ]
+        ],
+        "description": "Operational checklist reminder after each response"
       }
     ],
     "SubagentStop": [
@@ -57,7 +85,8 @@
             "command": ".hool/hooks/agent-checklist.sh",
             "timeout": 5
           }
-        ]
+        ],
+        "description": "Operational checklist reminder after subagent completes"
       }
     ]
   }
