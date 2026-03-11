@@ -16,7 +16,7 @@ You'll be asked three questions:
 Then open your AI coding tool and tell it:
 
 ```
-Read .hool/prompts/orchestrator.md and begin Phase 1: Brainstorm
+Begin Phase 1: Brainstorm
 ```
 
 That's it. The Product Lead agent takes over from here.
@@ -102,12 +102,16 @@ your-project/
       qa/
       forensic/
       governor/
-    prompts/                   # Agent prompt templates
+    checklists/                # Code review checklists
     hooks/                     # Platform hooks (PL context, governor trigger, etc.)
     metrics/                   # Dispatch counts, session tracking
     logs/                      # Agent execution logs
     mcps.json                  # MCP manifest
     agents.json                # Agent manifest
+  .claude/
+    agents/                    # Subagent definitions (7 agents)
+    skills/                    # Phase skills (/brainstorm, /spec, /design, /architecture)
+    settings.json              # Hooks configuration
   CLAUDE.md                    # (claude-code) or .cursor/rules/hool.mdc (cursor)
 ```
 

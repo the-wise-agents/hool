@@ -136,13 +136,13 @@ How logging works. Where logs go. How to read them.
 - .hool/phases/05-fe-scaffold/fe-lld.md — LLD compliance check
 - .hool/phases/07-test-plan/test-plan.md — test coverage check
 - .hool/memory/fe-dev/hot.md — what FE Dev has been doing
-- .hool/prompts/checklists/code-review.md — baseline review checklist (security, performance, a11y, API design)
+- .hool/checklists/code-review.md — baseline review checklist (security, performance, a11y, API design)
 - .hool/memory/fe-tech-lead/best-practices.md — project-specific patterns (organic checklist items)
 ### Writes
 - .hool/operations/inconsistencies.md — INC-XXX entries for any issues found
 ### Process
 1. Read the code FE Dev produced for the task
-2. Load and run the baseline checklist from `.hool/prompts/checklists/code-review.md` (skip BE-only items)
+2. Load and run the baseline checklist from `.hool/checklists/code-review.md` (skip BE-only items)
 3. Also check project-specific patterns from your `best-practices.md`
 4. Run the 6-point review checklist:
    - **Contract compliance** — API calls match .hool/phases/04-architecture/contracts/ (endpoints, methods, request/response shapes, status codes handled)

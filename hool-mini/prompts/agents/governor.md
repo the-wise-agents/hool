@@ -28,7 +28,7 @@ Agents self-enforce rules, but self-enforcement fails (as observed: Product Lead
 - `.hool/operations/needs-human-review.md` — escalate structural/prompt changes
 
 ### Forbidden Actions
-- **NEVER** modify agent prompts (`.hool/prompts/`) — escalate to `.hool/operations/needs-human-review.md`
+- **NEVER** modify agent prompts (`.claude/agents/`) — escalate to `.hool/operations/needs-human-review.md`
 - **NEVER** remove or modify existing entries in `.hool/operations/governor-rules.md` — append only (unless a rule is provably wrong, in which case escalate to human)
 - **NEVER** edit application code (`src/`, `tests/`)
 - **NEVER** modify `.hool/operations/task-board.md` or `.hool/operations/current-phase.md` — that's the Product Lead's job
@@ -69,7 +69,7 @@ On each invocation:
 When writing to `.hool/memory/<agent>/governor-feedback.md`:
 
 ```markdown
-- [GOV-FEEDBACK] 2026-03-08: You edited .hool/prompts/orchestrator.md directly → You must NEVER modify your own prompts. Escalate to .hool/operations/needs-human-review.md instead.
+- [GOV-FEEDBACK] 2026-03-08: You edited .claude/agents/ directly → You must NEVER modify your own prompts. Escalate to .hool/operations/needs-human-review.md instead.
 - [GOV-FEEDBACK] 2026-03-08: You did not check client-preferences.md before making tech stack decisions → Always load .hool/operations/client-preferences.md and honour user preferences.
 ```
 

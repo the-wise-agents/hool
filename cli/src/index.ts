@@ -6,7 +6,7 @@ import chalk from 'chalk';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
-import { scaffoldProject, scaffoldOnboard, reonboard, copyPrompts, writeMcpManifest, writeAgentManifest, copyPlatformFiles } from './core/scaffold.js';
+import { scaffoldProject, scaffoldOnboard, reonboard, writeMcpManifest, writeAgentManifest, copyPlatformFiles } from './core/scaffold.js';
 import type { ExecutionMode } from './adapters/types.js';
 import { createAdapter } from './adapters/index.js';
 import { checkAndInstallMcps } from './mcps/installer.js';
@@ -119,17 +119,8 @@ program
     await scaffoldProject(projectDir, projectType, mode);
     console.log(chalk.green('  ✓ Project structure created'));
 
-    // 4. Copy prompt templates
-    console.log(chalk.dim('  Copying agent prompts...'));
-    try {
-      await copyPrompts(projectDir, promptsDir);
-      console.log(chalk.green('  ✓ Agent prompts copied to .hool/prompts/'));
-    } catch {
-      console.log(chalk.yellow('  ⚠ Could not copy prompts (source not found). Copy them manually to .hool/prompts/'));
-    }
-
-    // 5. Copy platform-specific files (agents, hooks, settings)
-    console.log(chalk.dim('  Copying platform files (agents, hooks, settings)...'));
+    // 4. Copy platform-specific files (agents, hooks, skills, checklists, settings)
+    console.log(chalk.dim('  Copying platform files (agents, hooks, skills, checklists, settings)...'));
     try {
       await copyPlatformFiles(projectDir, templateRootDir, platform);
       console.log(chalk.green(`  ✓ Platform files copied for ${platform}`));
@@ -281,17 +272,8 @@ program
       await scaffoldOnboard(projectDir, projectType, mode);
       console.log(chalk.green('  ✓ HOOL structure created (existing code untouched)'));
 
-      // 5. Copy prompt templates
-      console.log(chalk.dim('  Copying agent prompts...'));
-      try {
-        await copyPrompts(projectDir, promptsDir);
-        console.log(chalk.green('  ✓ Agent prompts copied to .hool/prompts/'));
-      } catch {
-        console.log(chalk.yellow('  ⚠ Could not copy prompts (source not found). Copy them manually to .hool/prompts/'));
-      }
-
-      // 6. Copy platform-specific files (agents, hooks, settings)
-      console.log(chalk.dim('  Copying platform files (agents, hooks, settings)...'));
+      // 5. Copy platform-specific files (agents, hooks, skills, checklists, settings)
+      console.log(chalk.dim('  Copying platform files (agents, hooks, skills, checklists, settings)...'));
       try {
         await copyPlatformFiles(projectDir, templateRootDir, platform);
         console.log(chalk.green(`  ✓ Platform files copied for ${platform}`));

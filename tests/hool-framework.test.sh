@@ -3,6 +3,7 @@
 # Run: cd /tmp/hool-test-project && bash tests/hool-framework.test.sh
 
 PROJECT_ROOT="/tmp/hool-test-project"
+HOOL_ROOT="$(cd /Users/apple/Documents/personal\ projects/hool && pwd)"
 cd "$PROJECT_ROOT"
 
 PASS=0
@@ -32,7 +33,7 @@ section "1. FILE STRUCTURE — .hool/ directory"
 # ============================================================
 
 # 1.1 Core directories
-for dir in .hool/operations .hool/memory .hool/phases .hool/hooks .hool/prompts .hool/logs .hool/metrics; do
+for dir in .hool/operations .hool/memory .hool/phases .hool/hooks .hool/checklists .hool/logs .hool/metrics; do
   if [ -d "$dir" ]; then
     pass "$dir exists"
   else
@@ -95,20 +96,37 @@ else
   fail "project-profile.md missing"
 fi
 
-# 1.7 Prompts copied
-if [ -f ".hool/prompts/orchestrator.md" ]; then
-  pass "orchestrator.md copied"
-else
-  fail "orchestrator.md missing"
-fi
-
-for agent in 05-fe-tech-lead 06-be-tech-lead 08-be-dev 08-fe-dev 10-qa 11-forensic governor; do
-  if [ -f ".hool/prompts/agents/$agent.md" ]; then
-    pass ".hool/prompts/agents/$agent.md copied"
+# 1.7 Skills copied to .claude/skills/
+for skill in brainstorm spec design architecture; do
+  if [ -f ".claude/skills/$skill/SKILL.md" ]; then
+    pass ".claude/skills/$skill/SKILL.md exists"
   else
-    fail ".hool/prompts/agents/$agent.md missing"
+    fail ".claude/skills/$skill/SKILL.md missing"
   fi
 done
+
+# 1.7b Skill files have YAML frontmatter
+for skill in brainstorm spec design architecture; do
+  if head -1 ".claude/skills/$skill/SKILL.md" | grep -q "^---"; then
+    pass ".claude/skills/$skill/SKILL.md has frontmatter"
+  else
+    fail ".claude/skills/$skill/SKILL.md missing frontmatter"
+  fi
+done
+
+# 1.7c Checklists copied
+if [ -f ".hool/checklists/code-review.md" ]; then
+  pass ".hool/checklists/code-review.md exists"
+else
+  fail ".hool/checklists/code-review.md missing"
+fi
+
+# 1.7d .hool/prompts/ should NOT exist
+if [ -d ".hool/prompts" ]; then
+  fail ".hool/prompts/ still exists (should be removed)"
+else
+  pass ".hool/prompts/ does not exist (correct)"
+fi
 
 # 1.8 Manifests
 if [ -f ".hool/agents.json" ]; then
@@ -498,21 +516,21 @@ fi
 section "6. PATH CONSISTENCY — no bare operations/, memory/, phases/"
 # ============================================================
 
-# Check that orchestrator.md uses .hool/ prefix consistently
-BARE_OPS=$(grep -c '`operations/' .hool/prompts/orchestrator.md 2>/dev/null | tr -d '\n' || echo "0")
-HOOL_OPS=$(grep -c '\.hool/operations/' .hool/prompts/orchestrator.md 2>/dev/null | tr -d '\n' || echo "0")
+# Check that CLAUDE.md (which embeds orchestrator) uses .hool/ prefix consistently
+BARE_OPS=$(grep -c '`operations/' CLAUDE.md 2>/dev/null | tr -d '\n' || echo "0")
+HOOL_OPS=$(grep -c '\.hool/operations/' CLAUDE.md 2>/dev/null | tr -d '\n' || echo "0")
 if [ "$BARE_OPS" -eq 0 ] && [ "$HOOL_OPS" -gt 0 ]; then
-  pass "orchestrator.md: no bare operations/ paths ($HOOL_OPS .hool/ refs)"
+  pass "CLAUDE.md: no bare operations/ paths ($HOOL_OPS .hool/ refs)"
 else
-  fail "orchestrator.md has $BARE_OPS bare operations/ paths"
+  fail "CLAUDE.md has $BARE_OPS bare operations/ paths"
 fi
 
-BARE_MEM=$(grep -c '`memory/' .hool/prompts/orchestrator.md 2>/dev/null | tr -d '\n' || echo "0")
-HOOL_MEM=$(grep -c '\.hool/memory/' .hool/prompts/orchestrator.md 2>/dev/null | tr -d '\n' || echo "0")
+BARE_MEM=$(grep -c '`memory/' CLAUDE.md 2>/dev/null | tr -d '\n' || echo "0")
+HOOL_MEM=$(grep -c '\.hool/memory/' CLAUDE.md 2>/dev/null | tr -d '\n' || echo "0")
 if [ "$BARE_MEM" -eq 0 ] && [ "$HOOL_MEM" -gt 0 ]; then
-  pass "orchestrator.md: no bare memory/ paths ($HOOL_MEM .hool/ refs)"
+  pass "CLAUDE.md: no bare memory/ paths ($HOOL_MEM .hool/ refs)"
 else
-  fail "orchestrator.md has $BARE_MEM bare memory/ paths"
+  fail "CLAUDE.md has $BARE_MEM bare memory/ paths"
 fi
 
 # Check agent definitions use .hool/ paths
@@ -578,14 +596,14 @@ section "9. V0.6 FEATURES"
 # ============================================================
 
 # 9.1 Progressive workflow in orchestrator
-if grep -q "Complexity Classification" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+if grep -q "Complexity Classification" "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null; then
   pass "Orchestrator has complexity classification section"
 else
   fail "Orchestrator missing complexity classification"
 fi
 
 for tier in "Trivial" "Small" "Medium" "Large"; do
-  if grep -q "$tier" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+  if grep -q "$tier" "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null; then
     pass "Orchestrator has $tier complexity tier"
   else
     fail "Orchestrator missing $tier complexity tier"
@@ -593,47 +611,49 @@ for tier in "Trivial" "Small" "Medium" "Large"; do
 done
 
 # 9.2 Ship flow in orchestrator
-if grep -q "Ship Flow" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+if grep -q "Ship Flow" "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null; then
   pass "Orchestrator has ship flow section"
 else
   fail "Orchestrator missing ship flow"
 fi
 
 # 9.3 Nudge system in orchestrator
-if grep -q "Nudge System" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+if grep -q "Nudge System" "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null; then
   pass "Orchestrator has nudge system section"
 else
   fail "Orchestrator missing nudge system"
 fi
 
-if grep -q "Interactive Mode Nudges" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+if grep -q "Interactive Mode Nudges" "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null; then
   pass "Orchestrator has interactive mode nudges"
 else
   fail "Orchestrator missing interactive mode nudges"
 fi
 
-if grep -q "Full-HOOL Mode Nudges" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+if grep -q "Full-HOOL Mode Nudges" "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null; then
   pass "Orchestrator has full-hool mode nudges"
 else
   fail "Orchestrator missing full-hool mode nudges"
 fi
 
-# 9.4 TDD enforcement in dev prompts
-for agent in "08-fe-dev" "08-be-dev"; do
-  if grep -q "Test Execution Requirement" "$PROJECT_ROOT/.hool/prompts/agents/${agent}.md" 2>/dev/null; then
-    pass "$agent has test execution requirement"
+# 9.4 TDD enforcement in dev prompts (check source templates)
+for agent_pair in "08-fe-dev:fe-dev" "08-be-dev:be-dev"; do
+  src="${agent_pair%%:*}"
+  name="${agent_pair##*:}"
+  if grep -q "Test Execution Requirement" "$HOOL_ROOT/hool-mini/prompts/agents/${src}.md" 2>/dev/null; then
+    pass "$name has test execution requirement (source prompt)"
   else
-    fail "$agent missing test execution requirement"
+    fail "$name missing test execution requirement (source prompt)"
   fi
-  if grep -qi "paste the actual terminal output" "$PROJECT_ROOT/.hool/prompts/agents/${agent}.md" 2>/dev/null; then
-    pass "$agent requires pasted terminal output"
+  if grep -qi "paste the actual terminal output" "$HOOL_ROOT/hool-mini/prompts/agents/${src}.md" 2>/dev/null; then
+    pass "$name requires pasted terminal output (source prompt)"
   else
-    fail "$agent missing paste terminal output requirement"
+    fail "$name missing paste terminal output requirement (source prompt)"
   fi
 done
 
 # 9.5 TDD enforcement in QA prompt
-if grep -q "MANDATORY.*paste actual output" "$PROJECT_ROOT/.hool/prompts/agents/10-qa.md" 2>/dev/null; then
+if grep -q "MANDATORY.*paste actual output" "$HOOL_ROOT/hool-mini/prompts/agents/10-qa.md" 2>/dev/null; then
   pass "QA has mandatory test execution with pasted output"
 else
   fail "QA missing mandatory test execution requirement"
@@ -647,65 +667,67 @@ else
 fi
 
 # 9.7 Governor cross-agent pattern detection
-if grep -q "Cross-agent pattern detection" "$PROJECT_ROOT/.hool/prompts/agents/governor.md" 2>/dev/null; then
+if grep -q "Cross-agent pattern detection" "$HOOL_ROOT/hool-mini/prompts/agents/governor.md" 2>/dev/null; then
   pass "Governor has cross-agent pattern detection"
 else
   fail "Governor missing cross-agent pattern detection"
 fi
 
-if grep -q "CROSS-AGENT" "$PROJECT_ROOT/.hool/prompts/agents/governor.md" 2>/dev/null; then
+if grep -q "CROSS-AGENT" "$HOOL_ROOT/hool-mini/prompts/agents/governor.md" 2>/dev/null; then
   pass "Governor has CROSS-AGENT tag"
 else
   fail "Governor missing CROSS-AGENT tag"
 fi
 
 # 9.8 Governor re-dispatch in orchestrator
-if grep -q "Immediately re-dispatch the violating agent" "$PROJECT_ROOT/.hool/prompts/orchestrator.md" 2>/dev/null; then
+if grep -q "Immediately re-dispatch the violating agent" "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null; then
   pass "Orchestrator has governor re-dispatch directive"
 else
   fail "Orchestrator missing governor re-dispatch"
 fi
 
 # 9.9 Baseline review checklist
-if [ -f "$PROJECT_ROOT/.hool/prompts/checklists/code-review.md" ]; then
+if [ -f "$PROJECT_ROOT/.hool/checklists/code-review.md" ]; then
   pass "Code review checklist exists"
 else
   fail "Code review checklist missing"
 fi
 
 for category in "Security" "API Design" "Performance" "Accessibility" "Code Quality"; do
-  if grep -q "## $category" "$PROJECT_ROOT/.hool/prompts/checklists/code-review.md" 2>/dev/null; then
+  if grep -q "## $category" "$PROJECT_ROOT/.hool/checklists/code-review.md" 2>/dev/null; then
     pass "Checklist has $category section"
   else
     fail "Checklist missing $category section"
   fi
 done
 
-# 9.10 Checklist wired into Tech Lead prompts
-for agent in "05-fe-tech-lead" "06-be-tech-lead"; do
-  if grep -q "code-review.md" "$PROJECT_ROOT/.hool/prompts/agents/${agent}.md" 2>/dev/null; then
-    pass "$agent references code-review checklist"
+# 9.10 Checklist wired into Tech Lead prompts (check source templates)
+for agent_pair in "05-fe-tech-lead:fe-tech-lead" "06-be-tech-lead:be-tech-lead"; do
+  src="${agent_pair%%:*}"
+  name="${agent_pair##*:}"
+  if grep -q "code-review.md" "$HOOL_ROOT/hool-mini/prompts/agents/${src}.md" 2>/dev/null; then
+    pass "$name references code-review checklist (source prompt)"
   else
-    fail "$agent missing code-review checklist reference"
+    fail "$name missing code-review checklist reference (source prompt)"
   fi
 done
 
 # 9.11 QA scoring rubric
-if grep -q "QA Scoring Rubric" "$PROJECT_ROOT/.hool/prompts/agents/10-qa.md" 2>/dev/null; then
+if grep -q "QA Scoring Rubric" "$HOOL_ROOT/hool-mini/prompts/agents/10-qa.md" 2>/dev/null; then
   pass "QA has scoring rubric"
 else
   fail "QA missing scoring rubric"
 fi
 
 for category in "Functional correctness" "Test coverage" "Edge cases" "Visual fidelity" "Exploratory findings"; do
-  if grep -q "$category" "$PROJECT_ROOT/.hool/prompts/agents/10-qa.md" 2>/dev/null; then
+  if grep -q "$category" "$HOOL_ROOT/hool-mini/prompts/agents/10-qa.md" 2>/dev/null; then
     pass "QA rubric has $category"
   else
     fail "QA rubric missing $category"
   fi
 done
 
-if grep -q "QA-SCORE" "$PROJECT_ROOT/.hool/prompts/agents/10-qa.md" 2>/dev/null; then
+if grep -q "QA-SCORE" "$HOOL_ROOT/hool-mini/prompts/agents/10-qa.md" 2>/dev/null; then
   pass "QA has QA-SCORE work log tag"
 else
   fail "QA missing QA-SCORE tag"

@@ -105,7 +105,7 @@ You may ONLY write to these paths:
 - **NEVER** edit files in `src/`, `tests/`, or any application code — dispatch the assigned agent
 - **NEVER** run package install/remove commands — dispatch the assigned agent
 - **NEVER** modify `.env*` files or credentials — dispatch the assigned agent
-- **NEVER** modify agent prompts (`.hool/prompts/`) — escalate to `.hool/operations/needs-human-review.md`
+- **NEVER** modify agent prompts (`.claude/agents/`) — escalate to `.hool/operations/needs-human-review.md`
 - **NEVER** modify `.hool/operations/governor-rules.md` — only the governor or human may change this
 - There is **no task too small for agent dispatch**. Even a one-line change must go through the assigned agent. This preserves traceability and agent memory continuity.
 - **Broken state does NOT exempt you from these rules.** If `current-phase.md` is empty, the task board is stale, or HOOL state is incomplete — you MUST still dispatch subagents for src/tests changes. Run state reconciliation first (see below), then dispatch. Never bypass dispatch by using shell commands (sed, echo, etc.) to edit application code directly.
@@ -354,7 +354,7 @@ After all tasks complete:
 
 ### Process
 1. Read project profile
-2. Load brainstorm skill prompt from `prompts/skills/`
+2. Invoke the /brainstorm skill
 3. Run interactively with user — explore ideas, constraints, scope
 4. Produce `.hool/phases/01-brainstorm/brainstorm.md`
 5. Get explicit sign-off: "Do you approve this brainstorm? (yes/no/changes needed)"
@@ -383,7 +383,7 @@ After all tasks complete:
 
 ### Process (interactive mode)
 1. Read all prior phase docs
-2. Load spec skill prompt from `prompts/skills/`
+2. Invoke the /spec skill
 3. Run interactively with user — define user stories, acceptance criteria
 4. Produce `.hool/phases/02-spec/spec.md` (and `features/` if project warrants splitting)
 5. Get explicit sign-off: "Do you approve this spec? (yes/no/changes needed)"
@@ -392,7 +392,7 @@ After all tasks complete:
 
 ### Process (full-hool mode)
 1. Read all prior phase docs
-2. Load spec skill prompt from `prompts/skills/`
+2. Invoke the /spec skill
 3. Autonomously extract user stories from brainstorm, expand acceptance criteria, define edge cases and error states
 4. For ambiguous requirements: pick the simpler/more conventional option, document the choice and alternative
 5. Produce `.hool/phases/02-spec/spec.md` (and `features/` if project warrants splitting)
@@ -421,7 +421,7 @@ After all tasks complete:
 
 ### Process (interactive mode)
 1. Read all prior phase docs
-2. Load design skill prompt from `prompts/skills/`
+2. Invoke the /design skill
 3. Run interactively with user — define screens, layout, visual language
 4. Produce `.hool/phases/03-design/design.md`, design cards, and flows (if project warrants splitting)
 5. Get explicit sign-off: "Do you approve this design? (yes/no/changes needed)"
@@ -430,7 +430,7 @@ After all tasks complete:
 
 ### Process (full-hool mode)
 1. Read all prior phase docs
-2. Load design skill prompt from `prompts/skills/`
+2. Invoke the /design skill
 3. Autonomously design: inventory screens from spec, choose design system, create design cards
 4. Use web search / deepwiki for design inspiration and conventions for this type of project
 5. Produce `.hool/phases/03-design/design.md`, design cards, and flows
@@ -481,7 +481,7 @@ After all tasks complete:
 
 ### Process (full-hool mode)
 1. Read all prior phase docs
-2. Load architecture skill prompt from `prompts/skills/`
+2. Invoke the /architecture skill
 3. Autonomously choose tech stack — pick boring, proven technology appropriate for the project type. Use context7/deepwiki to research.
 4. Write `.hool/phases/04-architecture/architecture.md`
 5. Design contracts autonomously — write `.hool/phases/04-architecture/contracts/_index.md` + per-domain contract files
@@ -878,7 +878,7 @@ The Governor is a behavioral auditor — it does NOT build, test, or review code
 - Manually: user says "run governor" or similar
 
 **How to dispatch:**
-1. Read `.hool/prompts/agents/governor.md`
+1. Read `.claude/agents/governor.md`
 2. Read `.hool/memory/governor/hot.md`, `.hool/memory/governor/best-practices.md`
 3. Dispatch Governor subagent with context:
    - `.hool/operations/governor-rules.md` — the rules to audit against

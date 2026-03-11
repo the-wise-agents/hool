@@ -87,7 +87,7 @@ export async function scaffoldProject(projectDir: string, projectType: ProjectTy
   }
 
   // Create .hool directories
-  await fs.mkdir(path.join(projectDir, '.hool/prompts'), { recursive: true });
+  await fs.mkdir(path.join(projectDir, '.hool/checklists'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/metrics'), { recursive: true });
@@ -133,7 +133,7 @@ export async function scaffoldOnboard(projectDir: string, projectType: ProjectTy
   }
 
   // Create .hool directories
-  await fs.mkdir(path.join(projectDir, '.hool/prompts'), { recursive: true });
+  await fs.mkdir(path.join(projectDir, '.hool/checklists'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/metrics'), { recursive: true });
@@ -159,7 +159,9 @@ export async function reonboard(projectDir: string, mode: ExecutionMode = 'inter
   await fs.writeFile(taskBoardPath, header + prepend + body, 'utf-8');
 }
 
+/** @deprecated Use copySkills + copyChecklists instead */
 export async function copyPrompts(projectDir: string, promptsSourceDir: string): Promise<void> {
+  // Legacy: copies all prompts to .hool/prompts/ — kept for backwards compat
   const hoolPromptsDir = path.join(projectDir, '.hool/prompts');
 
   async function copyDir(src: string, dest: string): Promise<void> {
@@ -177,6 +179,39 @@ export async function copyPrompts(projectDir: string, promptsSourceDir: string):
   }
 
   await copyDir(promptsSourceDir, hoolPromptsDir);
+}
+
+export async function copySkills(projectDir: string, promptsSourceDir: string): Promise<void> {
+  const skillsSourceDir = path.join(promptsSourceDir, 'skills');
+  try {
+    const entries = await fs.readdir(skillsSourceDir);
+    for (const entry of entries) {
+      if (!entry.endsWith('.md')) continue;
+      const skillName = entry.replace(/^\d+-/, '').replace('.md', ''); // "01-brainstorm.md" -> "brainstorm"
+      const skillDir = path.join(projectDir, '.claude/skills', skillName);
+      await fs.mkdir(skillDir, { recursive: true });
+      await fs.copyFile(
+        path.join(skillsSourceDir, entry),
+        path.join(skillDir, 'SKILL.md'),
+      );
+    }
+  } catch { /* skills dir doesn't exist */ }
+}
+
+export async function copyChecklists(projectDir: string, promptsSourceDir: string): Promise<void> {
+  const checklistsSourceDir = path.join(promptsSourceDir, 'checklists');
+  const checklistsDest = path.join(projectDir, '.hool/checklists');
+  await fs.mkdir(checklistsDest, { recursive: true });
+  try {
+    const entries = await fs.readdir(checklistsSourceDir);
+    for (const entry of entries) {
+      if (!entry.endsWith('.md')) continue;
+      await fs.copyFile(
+        path.join(checklistsSourceDir, entry),
+        path.join(checklistsDest, entry),
+      );
+    }
+  } catch { /* checklists dir doesn't exist */ }
 }
 
 export async function writeMcpManifest(
@@ -208,7 +243,7 @@ const AGENT_MANIFEST = [
   {
     name: 'product-lead',
     role: 'Vision, contracts, doc consistency, phase gating, agent dispatch',
-    prompt: '.hool/prompts/orchestrator.md',
+    prompt: 'CLAUDE.md',
     'agent-definition': { 'claude-code': null, cursor: null },
     memory: '.hool/memory/product-lead/',
     phases: [0, 1, 2, 3, 4, 12],
@@ -216,7 +251,7 @@ const AGENT_MANIFEST = [
   {
     name: 'fe-tech-lead',
     role: 'FE scaffold, LLD, code review, code-vs-doc consistency',
-    prompt: '.hool/prompts/agents/05-fe-tech-lead.md',
+    prompt: '.claude/agents/fe-tech-lead.md',
     'agent-definition': { 'claude-code': '.claude/agents/fe-tech-lead.md', cursor: '.cursor/agents/fe-tech-lead.md' },
     'cursor-rule': '.cursor/rules/fe-tech-lead.mdc',
     memory: '.hool/memory/fe-tech-lead/',
@@ -225,7 +260,7 @@ const AGENT_MANIFEST = [
   {
     name: 'be-tech-lead',
     role: 'BE scaffold, LLD, code review, code-vs-doc consistency',
-    prompt: '.hool/prompts/agents/06-be-tech-lead.md',
+    prompt: '.claude/agents/be-tech-lead.md',
     'agent-definition': { 'claude-code': '.claude/agents/be-tech-lead.md', cursor: '.cursor/agents/be-tech-lead.md' },
     'cursor-rule': '.cursor/rules/be-tech-lead.mdc',
     memory: '.hool/memory/be-tech-lead/',
@@ -234,7 +269,7 @@ const AGENT_MANIFEST = [
   {
     name: 'fe-dev',
     role: 'Frontend implementation',
-    prompt: '.hool/prompts/agents/08-fe-dev.md',
+    prompt: '.claude/agents/fe-dev.md',
     'agent-definition': { 'claude-code': '.claude/agents/fe-dev.md', cursor: '.cursor/agents/fe-dev.md' },
     'cursor-rule': '.cursor/rules/fe-dev.mdc',
     memory: '.hool/memory/fe-dev/',
@@ -243,7 +278,7 @@ const AGENT_MANIFEST = [
   {
     name: 'be-dev',
     role: 'Backend implementation',
-    prompt: '.hool/prompts/agents/08-be-dev.md',
+    prompt: '.claude/agents/be-dev.md',
     'agent-definition': { 'claude-code': '.claude/agents/be-dev.md', cursor: '.cursor/agents/be-dev.md' },
     'cursor-rule': '.cursor/rules/be-dev.mdc',
     memory: '.hool/memory/be-dev/',
@@ -252,7 +287,7 @@ const AGENT_MANIFEST = [
   {
     name: 'qa',
     role: 'Test plan, test execution, bug reporting',
-    prompt: '.hool/prompts/agents/10-qa.md',
+    prompt: '.claude/agents/qa.md',
     'agent-definition': { 'claude-code': '.claude/agents/qa.md', cursor: '.cursor/agents/qa.md' },
     'cursor-rule': '.cursor/rules/qa.mdc',
     memory: '.hool/memory/qa/',
@@ -261,7 +296,7 @@ const AGENT_MANIFEST = [
   {
     name: 'forensic',
     role: 'Root cause analysis, bug triage, fix routing',
-    prompt: '.hool/prompts/agents/11-forensic.md',
+    prompt: '.claude/agents/forensic.md',
     'agent-definition': { 'claude-code': '.claude/agents/forensic.md', cursor: '.cursor/agents/forensic.md' },
     'cursor-rule': '.cursor/rules/forensic.mdc',
     memory: '.hool/memory/forensic/',
@@ -270,7 +305,7 @@ const AGENT_MANIFEST = [
   {
     name: 'governor',
     role: 'Behavioral auditor, rule enforcement, corrective feedback',
-    prompt: '.hool/prompts/agents/governor.md',
+    prompt: '.claude/agents/governor.md',
     'agent-definition': { 'claude-code': '.claude/agents/governor.md', cursor: '.cursor/agents/governor.md' },
     'cursor-rule': '.cursor/rules/governor.mdc',
     memory: '.hool/memory/governor/',
@@ -351,6 +386,31 @@ export async function copyPlatformFiles(projectDir: string, templateRootDir: str
         if (f.endsWith('.sh')) {
           await fs.chmod(path.join(hooksDest, f), 0o755);
         }
+      }
+    } catch { /* ok */ }
+
+    // Copy skills to .claude/skills/
+    const skillsSrc = path.join(hoolMiniDir, 'prompts/skills');
+    try {
+      const skillEntries = await fs.readdir(skillsSrc);
+      for (const entry of skillEntries) {
+        if (!entry.endsWith('.md')) continue;
+        const skillName = entry.replace(/^\d+-/, '').replace('.md', '');
+        const skillDir = path.join(projectDir, '.claude/skills', skillName);
+        await fs.mkdir(skillDir, { recursive: true });
+        await fs.copyFile(path.join(skillsSrc, entry), path.join(skillDir, 'SKILL.md'));
+      }
+    } catch { /* ok */ }
+
+    // Copy checklists to .hool/checklists/
+    const checklistsSrc = path.join(hoolMiniDir, 'prompts/checklists');
+    const checklistsDest = path.join(projectDir, '.hool/checklists');
+    await fs.mkdir(checklistsDest, { recursive: true });
+    try {
+      const checklistEntries = await fs.readdir(checklistsSrc);
+      for (const entry of checklistEntries) {
+        if (!entry.endsWith('.md')) continue;
+        await fs.copyFile(path.join(checklistsSrc, entry), path.join(checklistsDest, entry));
       }
     } catch { /* ok */ }
   }

@@ -85,15 +85,13 @@ export class ClaudeCodeAdapter implements Adapter {
 
   async injectInstructions(config: AdapterConfig): Promise<void> {
     const claudeMdPath = path.join(config.projectDir, 'CLAUDE.md');
-    const orchestratorPath = path.join(config.projectDir, '.hool', 'prompts', 'orchestrator.md');
-
     let orchestratorContent = '';
     try {
-      orchestratorContent = await fs.readFile(orchestratorPath, 'utf-8');
+      orchestratorContent = await fs.readFile(path.join(config.promptsDir, 'orchestrator.md'), 'utf-8');
     } catch {
-      // Fallback: read from promptsDir (source) if .hool/prompts doesn't exist yet
+      // Fallback: legacy .hool/prompts/ location
       try {
-        orchestratorContent = await fs.readFile(path.join(config.promptsDir, 'orchestrator.md'), 'utf-8');
+        orchestratorContent = await fs.readFile(path.join(config.projectDir, '.hool', 'prompts', 'orchestrator.md'), 'utf-8');
       } catch {
         orchestratorContent = '<!-- orchestrator.md not found — run hool init to generate -->';
       }
