@@ -156,6 +156,9 @@ How logging works. Where logs go. How to read them.
    - Code inconsistency found -> write to .hool/operations/inconsistencies.md with INC-XXX format
    - Doc inconsistency found (spec says X, contract says Y) -> escalate to Product Lead via .hool/operations/inconsistencies.md
 
+## Forbidden Actions
+- NEVER run git commands (add, commit, push, etc.) — the Product Lead commits your work after you return
+
 ## Work Log
 ### Tags
 - [ARCH-FE] — FE architectural decision -> best-practices.md

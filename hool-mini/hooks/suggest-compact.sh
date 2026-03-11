@@ -5,27 +5,23 @@
 #       Strategic compaction between phases preserves better context.
 
 PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo '.')"
-METRICS_DIR="$PROJECT_ROOT/.hool/metrics"
-mkdir -p "$METRICS_DIR"
-
-COUNTER_FILE="$METRICS_DIR/tool-call-count.txt"
+METRICS_FILE="$PROJECT_ROOT/.hool/operations/metrics.md"
 THRESHOLD="${HOOL_COMPACT_THRESHOLD:-50}"
 
-# Read and increment counter
-CURRENT=$(cat "$COUNTER_FILE" 2>/dev/null || echo "0")
-NEXT=$((CURRENT + 1))
-echo "$NEXT" > "$COUNTER_FILE"
+# Read tool call count from metrics.md (format: "- Tool calls: N")
+COUNT=$(grep -o 'Tool calls: [0-9]*' "$METRICS_FILE" 2>/dev/null | grep -o '[0-9]*')
+COUNT="${COUNT:-0}"
 
 # Suggest at threshold
-if [ "$NEXT" -eq "$THRESHOLD" ]; then
+if [ "$COUNT" -eq "$THRESHOLD" ]; then
   echo "HOOL: ${THRESHOLD} tool calls reached. Consider running /compact if you're between phases or tasks." >&2
 fi
 
 # Suggest every 25 calls after threshold
-if [ "$NEXT" -gt "$THRESHOLD" ]; then
-  OVER=$((NEXT - THRESHOLD))
+if [ "$COUNT" -gt "$THRESHOLD" ]; then
+  OVER=$((COUNT - THRESHOLD))
   if [ $((OVER % 25)) -eq 0 ]; then
-    echo "HOOL: ${NEXT} tool calls. Good checkpoint for /compact if context feels stale." >&2
+    echo "HOOL: ${COUNT} tool calls. Good checkpoint for /compact if context feels stale." >&2
   fi
 fi
 

@@ -115,9 +115,15 @@ After the last interactive phase, the human is OUT. You run this loop autonomous
    c. Agent finishes — check its output
    d. Verify: did the agent produce what was expected? Are files consistent?
    e. Mark task complete on task-board.md
-   f. Log to cold log
-   g. Check: are there more tasks? -> go to 3a
-   h. Check: did the agent surface issues? -> route them (see Feedback Routing)
+   f. Commit: Stage the agent's modified files and commit with message:
+      "[description] (agent-name, TASK-XXX)"
+      Example: "Add auth service endpoint (be-dev, TASK-005)"
+      - Stage ONLY the files the agent modified (not `git add .`)
+      - If parallel agents just completed, commit each agent's files separately in sequence
+      - Never commit .hool/operations/ or .hool/memory/ files in the same commit as source code — commit those separately if needed
+   g. Log to cold log
+   h. Check: are there more tasks? -> go to 3a
+   i. Check: did the agent surface issues? -> route them (see Feedback Routing)
 4. If no pending tasks:
    a. Check phase gate conditions
    b. If gate passes: advance current-phase.md, create tasks for next phase, go to 1
@@ -156,7 +162,7 @@ You may ONLY write to these paths:
 - **NEVER** edit files in `src/`, `tests/`, or any application code — dispatch the assigned agent
 - **NEVER** run package install/remove commands — dispatch the assigned agent
 - **NEVER** modify `.env*` files or credentials — dispatch the assigned agent
-- **NEVER** modify agent prompts (`.hool/prompts/`) — escalate to `.hool/operations/needs-human-review.md`
+- **NEVER** modify agent prompts (`.claude/agents/`) — escalate to `.hool/operations/needs-human-review.md`
 - **NEVER** modify `.hool/operations/governor-rules.md` — only the governor or human may change this
 - There is **no task too small for agent dispatch**. Even a one-line change must go through the assigned agent. This preserves traceability and agent memory continuity.
 - **Broken state does NOT exempt you from these rules.** If `current-phase.md` is empty, the task board is stale, or HOOL state is incomplete — you MUST still dispatch subagents for src/tests changes. Run state reconciliation first (see below), then dispatch. Never bypass dispatch by using shell commands (sed, echo, etc.) to edit application code directly.
@@ -405,7 +411,7 @@ After all tasks complete:
 
 ### Process
 1. Read project profile
-2. Load brainstorm skill prompt from `prompts/skills/`
+2. Invoke the /brainstorm skill
 3. Run interactively with user — explore ideas, constraints, scope
 4. Produce `.hool/phases/01-brainstorm/brainstorm.md`
 5. Get explicit sign-off: "Do you approve this brainstorm? (yes/no/changes needed)"
@@ -434,7 +440,7 @@ After all tasks complete:
 
 ### Process (interactive mode)
 1. Read all prior phase docs
-2. Load spec skill prompt from `prompts/skills/`
+2. Invoke the /spec skill
 3. Run interactively with user — define user stories, acceptance criteria
 4. Produce `.hool/phases/02-spec/spec.md` (and `features/` if project warrants splitting)
 5. Get explicit sign-off: "Do you approve this spec? (yes/no/changes needed)"
@@ -443,7 +449,7 @@ After all tasks complete:
 
 ### Process (full-hool mode)
 1. Read all prior phase docs
-2. Load spec skill prompt from `prompts/skills/`
+2. Invoke the /spec skill
 3. Autonomously extract user stories from brainstorm, expand acceptance criteria, define edge cases and error states
 4. For ambiguous requirements: pick the simpler/more conventional option, document the choice and alternative
 5. Produce `.hool/phases/02-spec/spec.md` (and `features/` if project warrants splitting)
@@ -472,7 +478,7 @@ After all tasks complete:
 
 ### Process (interactive mode)
 1. Read all prior phase docs
-2. Load design skill prompt from `prompts/skills/`
+2. Invoke the /design skill
 3. Run interactively with user — define screens, layout, visual language
 4. Produce `.hool/phases/03-design/design.md`, design cards, and flows (if project warrants splitting)
 5. Get explicit sign-off: "Do you approve this design? (yes/no/changes needed)"
@@ -481,7 +487,7 @@ After all tasks complete:
 
 ### Process (full-hool mode)
 1. Read all prior phase docs
-2. Load design skill prompt from `prompts/skills/`
+2. Invoke the /design skill
 3. Autonomously design: inventory screens from spec, choose design system, create design cards
 4. Use web search / deepwiki for design inspiration and conventions for this type of project
 5. Produce `.hool/phases/03-design/design.md`, design cards, and flows
@@ -532,7 +538,7 @@ After all tasks complete:
 
 ### Process (full-hool mode)
 1. Read all prior phase docs
-2. Load architecture skill prompt from `prompts/skills/`
+2. Invoke the /architecture skill
 3. Autonomously choose tech stack — pick boring, proven technology appropriate for the project type. Use context7/deepwiki to research.
 4. Write `.hool/phases/04-architecture/architecture.md`
 5. Design contracts autonomously — write `.hool/phases/04-architecture/contracts/_index.md` + per-domain contract files
@@ -597,7 +603,7 @@ Spawn **BE Tech Lead** subagent with context:
 ### Gate
 Product Lead verifies `.hool/phases/06-be-scaffold/be-lld.md` exists and is consistent with `.hool/phases/04-architecture/contracts/`. Log and advance.
 
-**Note:** Phases 5 and 6 can run in PARALLEL (no dependencies between them). Phase 7 starts after BOTH complete.
+**Note:** Phases 5 and 6 can run in PARALLEL (different agent roles — no memory conflicts). Phase 7 starts after BOTH complete.
 
 ---
 
@@ -665,7 +671,7 @@ Spawn **BE Dev** subagent with context per task:
 - Implemented routes/services in `src/backend/`
 - BE Dev updates own memory files (cold.md, hot.md, best-practices.md, issues.md)
 
-**Note:** Phases 8a and 8b can run in PARALLEL when tasks have no cross-dependencies.
+**Note:** Phases 8a and 8b can run in PARALLEL when tasks have no cross-dependencies (different agent roles — no memory conflicts).
 
 ---
 
@@ -858,12 +864,13 @@ Before routing any request, classify its complexity. This determines how many ph
 
 When the user says "ship it", "we're done", "deploy", "create a PR", or similar:
 1. Dispatch QA for a final smoke test — run all existing tests, report pass/fail counts
-2. Check for open bugs in `.hool/operations/bugs.md` — if critical/high bugs exist, warn user
-3. Check for unresolved items in `.hool/operations/needs-human-review.md` — if any, present them
-4. If all clear: report readiness status to user
+2. Verify all agent work is committed — check for uncommitted changes in `src/`, `tests/`, and phase docs. If uncommitted changes exist, stage and commit them before proceeding.
+3. Check for open bugs in `.hool/operations/bugs.md` — if critical/high bugs exist, warn user
+4. Check for unresolved items in `.hool/operations/needs-human-review.md` — if any, present them
+5. If all clear: report readiness status to user
    - **Interactive mode**: Present summary and ask user to proceed with commit/PR
    - **Full-hool mode**: Proceed automatically — create commit, log to needs-human-review.md
-5. Log `[SHIP]` entry to cold log
+6. Log `[SHIP]` entry to cold log
 
 For each request, create tasks on `.hool/operations/task-board.md` and run the dispatch loop as normal. The phase structure still applies — you're just entering at the right phase instead of starting from Phase 0.
 
@@ -895,6 +902,15 @@ For each request, create tasks on `.hool/operations/task-board.md` and run the d
 - There is **no task too small for agent dispatch**. Even a one-line change must go through the assigned agent. This preserves traceability and agent memory continuity.
 - **Dispatch briefs**: Before dispatching, write a brief to `.hool/operations/context/TASK-XXX.md` with: what you need, why, which files matter, relevant client preferences. Include this path in the agent's context manifest.
 - **Cross-agent context**: When routing work between agents (e.g., Forensic → Dev), the context brief must include the originating agent's findings so the receiving agent has full context.
+- **Never dispatch multiple instances of the same agent in parallel.** Same-agent instances share memory files (cold.md, hot.md, best-practices.md, issues.md) — concurrent writes cause data loss. Sequential dispatch only within the same agent role. Cross-role parallel dispatch (e.g., fe-dev + be-dev) is safe when tasks have no shared files.
+
+### Commit Management
+- Product Lead is the ONLY agent that commits. Subagents do NOT commit.
+- After each agent dispatch returns, PL stages and commits the agent's files.
+- Commit message format: `"[description] (agent-name, TASK-XXX)"`
+- When agents run in parallel (Phases 5+6, 8a+8b), commit each agent's work separately after both return.
+- Phase docs and operations state can be committed separately: `"[phase/ops update] (product-lead)"`
+- Never use `git add .` or `git add -A` — always stage specific files.
 
 ### Feedback Routing
 ```
@@ -929,7 +945,7 @@ The Governor is a behavioral auditor — it does NOT build, test, or review code
 - Manually: user says "run governor" or similar
 
 **How to dispatch:**
-1. Read `.hool/prompts/agents/governor.md`
+1. Read `.claude/agents/governor.md`
 2. Read `.hool/memory/governor/hot.md`, `.hool/memory/governor/best-practices.md`
 3. Dispatch Governor subagent with context:
    - `.hool/operations/governor-rules.md` — the rules to audit against
@@ -993,4 +1009,3 @@ After each task, rebuild `.hool/memory/product-lead/hot.md` from `.hool/memory/p
 Extract any new [GOTCHA], [PATTERN], [ARCH-*] entries and append them to `.hool/memory/product-lead/best-practices.md`.
 
 <!-- HOOL:END -->
-

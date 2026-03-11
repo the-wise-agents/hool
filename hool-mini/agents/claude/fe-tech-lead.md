@@ -167,6 +167,7 @@ How logging works. Where logs go. How to read them.
 - NEVER modify agent prompts (`.hool/prompts/`)
 - NEVER modify `.hool/operations/governor-rules.md`
 - NEVER modify database schema or migrations
+- NEVER run git commands (add, commit, push, etc.) — the Product Lead commits your work after you return
 
 ## Work Log
 ### Tags

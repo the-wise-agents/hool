@@ -139,6 +139,7 @@ Go beyond the test plan. Try:
 - NEVER modify agent prompts (`.hool/prompts/`)
 - NEVER modify `.hool/operations/governor-rules.md`
 - NEVER fix bugs — only report them
+- NEVER run git commands (add, commit, push, etc.) — the Product Lead commits your work after you return
 
 ## MCP Tools Available
 - playwright: E2E testing, screenshot capture, browser automation

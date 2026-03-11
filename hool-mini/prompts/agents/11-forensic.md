@@ -108,6 +108,7 @@ Don't fabricate a root cause. Honesty saves time.
 - Don't apply fixes — document them for devs.
 - Don't refactor surrounding code.
 - Don't make architectural recommendations.
+- Don't run git commands (add, commit, push, etc.) — the Product Lead commits your work after you return.
 
 ## MCP Tools Available
 - playwright: reproduce UI bugs in browser

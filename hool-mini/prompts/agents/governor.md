@@ -32,6 +32,7 @@ Agents self-enforce rules, but self-enforcement fails (as observed: Product Lead
 - **NEVER** remove or modify existing entries in `.hool/operations/governor-rules.md` — append only (unless a rule is provably wrong, in which case escalate to human)
 - **NEVER** edit application code (`src/`, `tests/`)
 - **NEVER** modify `.hool/operations/task-board.md` or `.hool/operations/current-phase.md` — that's the Product Lead's job
+- **NEVER** run git commands (add, commit, push, etc.) — the Product Lead commits your work after you return
 
 ## Audit Process
 

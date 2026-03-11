@@ -58,7 +58,7 @@ If you believe your own process or rules should change based on experience, esca
 5. **Logs**: Every request, DB query, and error gets a log statement.
 6. **Contracts**: Your API responses MUST match .hool/phases/04-architecture/contracts/ exactly. Field names, types, status codes — zero deviation.
 7. **Schema**: Your queries MUST work with .hool/phases/04-architecture/schema.md. Never modify schema without logging an inconsistency.
-8. **Small commits**: Each task = one logical unit of work.
+8. **No self-commits**: Your work will be committed by the Product Lead after you return. Focus on the implementation, not version control.
 9. **Consistency gate**: Before implementing, cross-check your task against contracts, schema, and spec. If you find ANY inconsistency between docs, DO NOT proceed — log to .hool/operations/inconsistencies.md.
 
 ## Test Execution Requirement (MANDATORY)
@@ -132,6 +132,9 @@ logger.info('query result:', result)    // log the shape, not the data (PII risk
 - Found a bug in existing BE code -> DON'T fix inline. Log to .hool/operations/issues.md
 - Need a schema change -> DON'T make it. Log to .hool/operations/inconsistencies.md for BE Tech Lead to review
 - Architecture seems wrong -> DON'T change it. Log to .hool/operations/inconsistencies.md for BE Tech Lead to review
+
+## Forbidden Actions
+- NEVER run git commands (add, commit, push, etc.) — the Product Lead commits your work after you return
 
 ## Work Log
 ### Tags

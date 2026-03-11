@@ -182,6 +182,7 @@ Actual directory structure with explanations.
 - NEVER modify frontend code (`src/frontend/`)
 - NEVER modify agent prompts (`.hool/prompts/`)
 - NEVER modify `.hool/operations/governor-rules.md`
+- NEVER run git commands (add, commit, push, etc.) — the Product Lead commits your work after you return
 
 ## Work Log
 ### Tags

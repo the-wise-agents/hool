@@ -1,39 +1,41 @@
 #!/bin/bash
-# Hook: Track prompt/tool count and trigger governor every 3 dispatches
+# Hook: Track tool calls + agent dispatches in metrics.md, trigger governor every 3 dispatches
 # Type: PostToolUse
 # Outputs JSON with additionalContext when governor should run
 
 PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo '.')"
-METRICS_DIR="$PROJECT_ROOT/.hool/metrics"
-mkdir -p "$METRICS_DIR"
+METRICS_FILE="$PROJECT_ROOT/.hool/operations/metrics.md"
 
-COUNTER_FILE="$METRICS_DIR/prompt-count.log"
-SESSION_FILE="$METRICS_DIR/current-session.txt"
-DISPATCH_FILE="$METRICS_DIR/dispatch-count.txt"
-
-# Get or create session ID
-if [ ! -f "$SESSION_FILE" ]; then
-  echo "session-$(date +%Y%m%d-%H%M%S)" > "$SESSION_FILE"
+# Ensure metrics file exists with default counters
+if [ ! -f "$METRICS_FILE" ]; then
+  mkdir -p "$(dirname "$METRICS_FILE")"
+  cat > "$METRICS_FILE" <<'EOF'
+# HOOL Metrics
+- Agent dispatches: 0
+- Tool calls: 0
+- User prompts: 0
+EOF
 fi
 
-TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
+# Increment tool calls counter
+CURRENT_TOOLS=$(grep -o 'Tool calls: [0-9]*' "$METRICS_FILE" | grep -o '[0-9]*')
+CURRENT_TOOLS=${CURRENT_TOOLS:-0}
+NEXT_TOOLS=$((CURRENT_TOOLS + 1))
+sed -i '' "s/Tool calls: ${CURRENT_TOOLS}/Tool calls: ${NEXT_TOOLS}/" "$METRICS_FILE"
 
-# Append to log
-echo "$TIMESTAMP | tool-call" >> "$COUNTER_FILE"
-
-# Track dispatch count (Agent tool calls specifically)
-# Read from stdin to check tool name
+# Read stdin to check tool name
 INPUT=$(cat)
 TOOL_NAME=$(echo "$INPUT" | grep -o '"tool_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"tool_name"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
 
 if [ "$TOOL_NAME" = "Agent" ]; then
-  # Increment dispatch counter
-  CURRENT=$(cat "$DISPATCH_FILE" 2>/dev/null || echo "0")
-  NEXT=$((CURRENT + 1))
-  echo "$NEXT" > "$DISPATCH_FILE"
+  # Increment agent dispatches counter
+  CURRENT_DISPATCHES=$(grep -o 'Agent dispatches: [0-9]*' "$METRICS_FILE" | grep -o '[0-9]*')
+  CURRENT_DISPATCHES=${CURRENT_DISPATCHES:-0}
+  NEXT_DISPATCHES=$((CURRENT_DISPATCHES + 1))
+  sed -i '' "s/Agent dispatches: ${CURRENT_DISPATCHES}/Agent dispatches: ${NEXT_DISPATCHES}/" "$METRICS_FILE"
 
   # Check if divisible by 3
-  if [ $((NEXT % 3)) -eq 0 ]; then
+  if [ $((NEXT_DISPATCHES % 3)) -eq 0 ]; then
     # Output JSON to inject governor reminder into conversation
     cat <<'JSONEOF'
 {

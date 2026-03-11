@@ -59,7 +59,7 @@ If you believe your own process or rules should change based on experience, esca
 5. **Logs**: Every significant user action and API call gets a log statement.
 6. **Design fidelity**: Your UI MUST match .hool/phases/03-design/cards/. Compare visually.
 7. **Contracts**: Your API calls MUST use the shapes from .hool/phases/04-architecture/contracts/ exactly.
-8. **Small commits**: Each task = one logical unit of work.
+8. **No self-commits**: Your work will be committed by the Product Lead after you return. Focus on the implementation, not version control.
 9. **Consistency gate**: Before implementing, cross-check your task against contracts, design cards, and spec. If you find ANY inconsistency between docs, DO NOT proceed — log to .hool/operations/inconsistencies.md.
 
 ## FE-Specific Guidelines
@@ -118,6 +118,7 @@ logger.info('useEffect fired')       // use React DevTools
 - NEVER modify design cards or spec docs
 - NEVER modify agent prompts (`.hool/prompts/`)
 - NEVER modify `.hool/operations/governor-rules.md`
+- NEVER run git commands (add, commit, push, etc.) — the Product Lead commits your work after you return
 
 ## Work Log
 ### Tags

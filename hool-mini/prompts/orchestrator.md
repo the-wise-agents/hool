@@ -64,9 +64,15 @@ After the last interactive phase, the human is OUT. You run this loop autonomous
    c. Agent finishes — check its output
    d. Verify: did the agent produce what was expected? Are files consistent?
    e. Mark task complete on task-board.md
-   f. Log to cold log
-   g. Check: are there more tasks? -> go to 3a
-   h. Check: did the agent surface issues? -> route them (see Feedback Routing)
+   f. Commit: Stage the agent's modified files and commit with message:
+      "[description] (agent-name, TASK-XXX)"
+      Example: "Add auth service endpoint (be-dev, TASK-005)"
+      - Stage ONLY the files the agent modified (not `git add .`)
+      - If parallel agents just completed, commit each agent's files separately in sequence
+      - Never commit .hool/operations/ or .hool/memory/ files in the same commit as source code — commit those separately if needed
+   g. Log to cold log
+   h. Check: are there more tasks? -> go to 3a
+   i. Check: did the agent surface issues? -> route them (see Feedback Routing)
 4. If no pending tasks:
    a. Check phase gate conditions
    b. If gate passes: advance current-phase.md, create tasks for next phase, go to 1
@@ -546,7 +552,7 @@ Spawn **BE Tech Lead** subagent with context:
 ### Gate
 Product Lead verifies `.hool/phases/06-be-scaffold/be-lld.md` exists and is consistent with `.hool/phases/04-architecture/contracts/`. Log and advance.
 
-**Note:** Phases 5 and 6 can run in PARALLEL (no dependencies between them). Phase 7 starts after BOTH complete.
+**Note:** Phases 5 and 6 can run in PARALLEL (different agent roles — no memory conflicts). Phase 7 starts after BOTH complete.
 
 ---
 
@@ -614,7 +620,7 @@ Spawn **BE Dev** subagent with context per task:
 - Implemented routes/services in `src/backend/`
 - BE Dev updates own memory files (cold.md, hot.md, best-practices.md, issues.md)
 
-**Note:** Phases 8a and 8b can run in PARALLEL when tasks have no cross-dependencies.
+**Note:** Phases 8a and 8b can run in PARALLEL when tasks have no cross-dependencies (different agent roles — no memory conflicts).
 
 ---
 
@@ -807,12 +813,13 @@ Before routing any request, classify its complexity. This determines how many ph
 
 When the user says "ship it", "we're done", "deploy", "create a PR", or similar:
 1. Dispatch QA for a final smoke test — run all existing tests, report pass/fail counts
-2. Check for open bugs in `.hool/operations/bugs.md` — if critical/high bugs exist, warn user
-3. Check for unresolved items in `.hool/operations/needs-human-review.md` — if any, present them
-4. If all clear: report readiness status to user
+2. Verify all agent work is committed — check for uncommitted changes in `src/`, `tests/`, and phase docs. If uncommitted changes exist, stage and commit them before proceeding.
+3. Check for open bugs in `.hool/operations/bugs.md` — if critical/high bugs exist, warn user
+4. Check for unresolved items in `.hool/operations/needs-human-review.md` — if any, present them
+5. If all clear: report readiness status to user
    - **Interactive mode**: Present summary and ask user to proceed with commit/PR
    - **Full-hool mode**: Proceed automatically — create commit, log to needs-human-review.md
-5. Log `[SHIP]` entry to cold log
+6. Log `[SHIP]` entry to cold log
 
 For each request, create tasks on `.hool/operations/task-board.md` and run the dispatch loop as normal. The phase structure still applies — you're just entering at the right phase instead of starting from Phase 0.
 
@@ -844,6 +851,15 @@ For each request, create tasks on `.hool/operations/task-board.md` and run the d
 - There is **no task too small for agent dispatch**. Even a one-line change must go through the assigned agent. This preserves traceability and agent memory continuity.
 - **Dispatch briefs**: Before dispatching, write a brief to `.hool/operations/context/TASK-XXX.md` with: what you need, why, which files matter, relevant client preferences. Include this path in the agent's context manifest.
 - **Cross-agent context**: When routing work between agents (e.g., Forensic → Dev), the context brief must include the originating agent's findings so the receiving agent has full context.
+- **Never dispatch multiple instances of the same agent in parallel.** Same-agent instances share memory files (cold.md, hot.md, best-practices.md, issues.md) — concurrent writes cause data loss. Sequential dispatch only within the same agent role. Cross-role parallel dispatch (e.g., fe-dev + be-dev) is safe when tasks have no shared files.
+
+### Commit Management
+- Product Lead is the ONLY agent that commits. Subagents do NOT commit.
+- After each agent dispatch returns, PL stages and commits the agent's files.
+- Commit message format: `"[description] (agent-name, TASK-XXX)"`
+- When agents run in parallel (Phases 5+6, 8a+8b), commit each agent's work separately after both return.
+- Phase docs and operations state can be committed separately: `"[phase/ops update] (product-lead)"`
+- Never use `git add .` or `git add -A` — always stage specific files.
 
 ### Feedback Routing
 ```

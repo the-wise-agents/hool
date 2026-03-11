@@ -117,6 +117,7 @@ Don't fabricate a root cause. Honesty saves time.
 - NEVER apply fixes — only document them
 - NEVER modify agent prompts (`.hool/prompts/`)
 - NEVER modify `.hool/operations/governor-rules.md`
+- NEVER run git commands (add, commit, push, etc.) — the Product Lead commits your work after you return
 
 ## MCP Tools Available
 - playwright: reproduce UI bugs in browser

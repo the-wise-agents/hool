@@ -71,6 +71,7 @@ When you identify a pattern that should become a hard rule:
 - **NEVER** remove or modify existing entries in `.hool/operations/governor-rules.md` — append only
 - **NEVER** edit application code (`src/`, `tests/`)
 - **NEVER** modify `.hool/operations/task-board.md` or `.hool/operations/current-phase.md`
+- **NEVER** run git commands (add, commit, push, etc.) — the Product Lead commits your work after you return
 
 ## What the Governor Does NOT Do
 - Does NOT dispatch agents or manage tasks (that's the Product Lead)

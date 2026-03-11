@@ -4,6 +4,24 @@
 # Outputs JSON with additionalContext to remind the PL of its identity and state
 
 PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo '.')"
+METRICS_FILE="$PROJECT_ROOT/.hool/operations/metrics.md"
+
+# Ensure metrics file exists with default counters
+if [ ! -f "$METRICS_FILE" ]; then
+  mkdir -p "$(dirname "$METRICS_FILE")"
+  cat > "$METRICS_FILE" <<'EOF'
+# HOOL Metrics
+- Agent dispatches: 0
+- Tool calls: 0
+- User prompts: 0
+EOF
+fi
+
+# Increment user prompts counter
+CURRENT_PROMPTS=$(grep -o 'User prompts: [0-9]*' "$METRICS_FILE" | grep -o '[0-9]*')
+CURRENT_PROMPTS=${CURRENT_PROMPTS:-0}
+NEXT_PROMPTS=$((CURRENT_PROMPTS + 1))
+sed -i '' "s/User prompts: ${CURRENT_PROMPTS}/User prompts: ${NEXT_PROMPTS}/" "$METRICS_FILE"
 
 # Read current phase
 PHASE="unknown"
@@ -80,10 +98,11 @@ if [ -f "$PROJECT_ROOT/.hool/operations/inconsistencies.md" ]; then
   INCONSISTENCIES=$(grep -c '^- ' "$PROJECT_ROOT/.hool/operations/inconsistencies.md" 2>/dev/null | tr -d '\n' || echo "0")
 fi
 
-# Check governor dispatch count
+# Check governor dispatch count from metrics.md
 DISPATCH_COUNT=0
-if [ -f "$PROJECT_ROOT/.hool/metrics/dispatch-count.txt" ]; then
-  DISPATCH_COUNT=$(cat "$PROJECT_ROOT/.hool/metrics/dispatch-count.txt" 2>/dev/null | tr -d '\n' || echo "0")
+if [ -f "$METRICS_FILE" ]; then
+  DISPATCH_COUNT=$(grep -o 'Agent dispatches: [0-9]*' "$METRICS_FILE" | grep -o '[0-9]*' || echo "0")
+  DISPATCH_COUNT=${DISPATCH_COUNT:-0}
 fi
 GOVERNOR_DUE=""
 if [ "$DISPATCH_COUNT" -gt 0 ] && [ $(( DISPATCH_COUNT % 3 )) -ge 2 ]; then
