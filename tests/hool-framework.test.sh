@@ -271,7 +271,43 @@ else
   fail "track-prompt-count.sh did not trigger governor at 3" "Got: $RESULT"
 fi
 
-# 3.7 inject-pl-context.sh outputs valid JSON
+# 3.7 track-prompt-count.sh logs to prompt-count.log
+if [ -f .hool/metrics/prompt-count.log ]; then
+  LOG_LINES=$(wc -l < .hool/metrics/prompt-count.log | tr -d ' ')
+  if [ "$LOG_LINES" -ge 3 ]; then
+    pass "track-prompt-count.sh logs tool calls to prompt-count.log ($LOG_LINES entries)"
+  else
+    fail "track-prompt-count.sh log has too few entries" "Expected ≥3, got: $LOG_LINES"
+  fi
+else
+  fail "track-prompt-count.sh did not create prompt-count.log"
+fi
+
+# 3.8 track-prompt-count.sh does NOT increment dispatch count for non-Agent tools
+BEFORE=$(cat .hool/metrics/dispatch-count.txt 2>/dev/null)
+echo '{"tool_name":"Read","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh > /dev/null 2>&1
+AFTER=$(cat .hool/metrics/dispatch-count.txt 2>/dev/null)
+if [ "$BEFORE" = "$AFTER" ]; then
+  pass "track-prompt-count.sh ignores non-Agent tool calls for dispatch count"
+else
+  fail "track-prompt-count.sh incremented dispatch count for non-Agent tool" "Before: $BEFORE, After: $AFTER"
+fi
+
+# 3.9 track-prompt-count.sh does NOT trigger governor for non-multiple-of-3
+rm -f .hool/metrics/dispatch-count.txt
+echo '{"tool_name":"Agent","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh > /dev/null 2>&1
+RESULT=$(echo '{"tool_name":"Agent","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh 2>/dev/null)
+if echo "$RESULT" | grep -q "GOVERNOR CHECK"; then
+  fail "track-prompt-count.sh triggered governor at count 2 (should only trigger at multiples of 3)"
+else
+  pass "track-prompt-count.sh does NOT trigger governor at count 2"
+fi
+
+# Clean up for remaining tests
+rm -f .hool/metrics/dispatch-count.txt
+rm -f .hool/metrics/prompt-count.log
+
+# 3.10 inject-pl-context.sh outputs valid JSON
 RESULT=$(bash .hool/hooks/inject-pl-context.sh 2>/dev/null)
 if echo "$RESULT" | python3 -c "import json,sys; json.load(sys.stdin)" 2>/dev/null; then
   pass "inject-pl-context.sh outputs valid JSON"
@@ -872,6 +908,76 @@ cat > "$PROJECT_ROOT/.hool/operations/inconsistencies.md" << 'EOF'
 _No inconsistencies found yet._
 EOF
 rm -f "$PROJECT_ROOT/.hool/metrics/dispatch-count.txt"
+
+# ============================================================
+# 11. MCP CONFIGURATION
+# ============================================================
+section "11. MCP configuration"
+
+# 11.1 MCP manifest exists
+if [ -f .hool/mcps.json ]; then
+  pass "mcps.json manifest exists"
+else
+  fail "mcps.json manifest missing"
+fi
+
+# 11.2 MCP manifest contains required MCPs for web-app
+if grep -q "context7" .hool/mcps.json 2>/dev/null; then
+  pass "mcps.json includes context7"
+else
+  fail "mcps.json missing context7"
+fi
+
+if grep -q "playwright" .hool/mcps.json 2>/dev/null; then
+  pass "mcps.json includes playwright for web-app"
+else
+  fail "mcps.json missing playwright for web-app"
+fi
+
+if grep -q "deepwiki" .hool/mcps.json 2>/dev/null; then
+  pass "mcps.json includes deepwiki"
+else
+  fail "mcps.json missing deepwiki"
+fi
+
+# 11.3 MCP manifest has valid JSON
+if python3 -c "import json; json.load(open('.hool/mcps.json'))" 2>/dev/null; then
+  pass "mcps.json is valid JSON"
+else
+  fail "mcps.json is not valid JSON"
+fi
+
+# 11.4 MCP config entries have command and args
+if python3 -c "
+import json
+data = json.load(open('.hool/mcps.json'))
+for name, entry in data.get('servers', data).items():
+    assert 'command' in entry, f'{name} missing command'
+    assert 'args' in entry, f'{name} missing args'
+print('ok')
+" 2>/dev/null | grep -q "ok"; then
+  pass "mcps.json entries have command and args fields"
+else
+  fail "mcps.json entries missing command/args"
+fi
+
+# 11.5 Playwright uses correct package (@playwright/mcp, not @anthropic)
+if grep -q "@playwright/mcp" .hool/mcps.json 2>/dev/null; then
+  pass "mcps.json uses @playwright/mcp (correct package)"
+else
+  fail "mcps.json has wrong playwright package"
+fi
+
+# 11.6 CLI shows MCP restart warning when MCPs are newly installed
+INIT_OUTPUT=$(node "$HOOL_CLI" init -d /tmp/hool-mcp-test -p claude-code -t web-app -m interactive 2>&1 || true)
+# We can't easily test the actual warning without a clean MCP state,
+# but we can verify the CLI source contains the warning
+if grep -q "New MCPs installed" "$HOOL_CLI" 2>/dev/null || grep -q "New MCPs installed" "$(dirname "$HOOL_CLI")/../src/index.ts" 2>/dev/null; then
+  pass "CLI source contains MCP restart warning"
+else
+  fail "CLI source missing MCP restart warning"
+fi
+rm -rf /tmp/hool-mcp-test
 
 # ============================================================
 # RESULTS

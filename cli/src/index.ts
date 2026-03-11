@@ -156,6 +156,12 @@ program
           console.log(chalk.red(`  ✗ ${r.name} — failed: ${r.error}`));
         }
       }
+
+      const newlyInstalled = results.filter(r => r.status === 'installed');
+      if (newlyInstalled.length > 0) {
+        console.log(chalk.yellow('\n  ⚠ New MCPs installed. Start a NEW session for them to activate.'));
+        console.log(chalk.dim('    MCPs are loaded at session start — they won\'t work in an existing session.'));
+      }
     }
 
     // 7. Write MCP manifest + agent manifest
@@ -311,6 +317,12 @@ program
           } else {
             console.log(chalk.red(`  ✗ ${r.name} — failed: ${r.error}`));
           }
+        }
+
+        const newlyInstalled = results.filter(r => r.status === 'installed');
+        if (newlyInstalled.length > 0) {
+          console.log(chalk.yellow('\n  ⚠ New MCPs installed. Start a NEW session for them to activate.'));
+          console.log(chalk.dim('    MCPs are loaded at session start — they won\'t work in an existing session.'));
         }
       }
 
