@@ -264,12 +264,18 @@ else
   fail "block-pl-src-write.sh did not block tests/ write"
 fi
 
-# 3.5 track-prompt-count.sh increments dispatch counter
-rm -f .hool/metrics/dispatch-count.txt
+# 3.5 track-prompt-count.sh increments dispatch counter (uses metrics.md)
+# Reset metrics.md to clean state
+cat > .hool/operations/metrics.md <<'METRICSEOF'
+# HOOL Metrics
+- Agent dispatches: 0
+- Tool calls: 0
+- User prompts: 0
+METRICSEOF
 echo '{"tool_name":"Agent","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh > /dev/null 2>&1
-COUNT=$(cat .hool/metrics/dispatch-count.txt 2>/dev/null)
+COUNT=$(grep -o 'Agent dispatches: [0-9]*' .hool/operations/metrics.md | grep -o '[0-9]*')
 if [ "$COUNT" = "1" ]; then
-  pass "track-prompt-count.sh increments to 1"
+  pass "track-prompt-count.sh increments dispatch count to 1 in metrics.md"
 else
   fail "track-prompt-count.sh count wrong" "Expected 1, got: $COUNT"
 fi
@@ -277,7 +283,7 @@ fi
 # 3.6 track-prompt-count.sh triggers governor at 3
 echo '{"tool_name":"Agent","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh > /dev/null 2>&1
 RESULT=$(echo '{"tool_name":"Agent","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh 2>/dev/null)
-COUNT=$(cat .hool/metrics/dispatch-count.txt 2>/dev/null)
+COUNT=$(grep -o 'Agent dispatches: [0-9]*' .hool/operations/metrics.md | grep -o '[0-9]*')
 if [ "$COUNT" = "3" ]; then
   pass "track-prompt-count.sh increments to 3"
 else
@@ -289,22 +295,18 @@ else
   fail "track-prompt-count.sh did not trigger governor at 3" "Got: $RESULT"
 fi
 
-# 3.7 track-prompt-count.sh logs to prompt-count.log
-if [ -f .hool/metrics/prompt-count.log ]; then
-  LOG_LINES=$(wc -l < .hool/metrics/prompt-count.log | tr -d ' ')
-  if [ "$LOG_LINES" -ge 3 ]; then
-    pass "track-prompt-count.sh logs tool calls to prompt-count.log ($LOG_LINES entries)"
-  else
-    fail "track-prompt-count.sh log has too few entries" "Expected ≥3, got: $LOG_LINES"
-  fi
+# 3.7 track-prompt-count.sh increments tool call counter in metrics.md
+TOOL_COUNT=$(grep -o 'Tool calls: [0-9]*' .hool/operations/metrics.md | grep -o '[0-9]*')
+if [ "$TOOL_COUNT" -ge 3 ]; then
+  pass "track-prompt-count.sh tracks tool calls in metrics.md ($TOOL_COUNT calls)"
 else
-  fail "track-prompt-count.sh did not create prompt-count.log"
+  fail "track-prompt-count.sh tool call count too low" "Expected ≥3, got: $TOOL_COUNT"
 fi
 
 # 3.8 track-prompt-count.sh does NOT increment dispatch count for non-Agent tools
-BEFORE=$(cat .hool/metrics/dispatch-count.txt 2>/dev/null)
+BEFORE=$(grep -o 'Agent dispatches: [0-9]*' .hool/operations/metrics.md | grep -o '[0-9]*')
 echo '{"tool_name":"Read","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh > /dev/null 2>&1
-AFTER=$(cat .hool/metrics/dispatch-count.txt 2>/dev/null)
+AFTER=$(grep -o 'Agent dispatches: [0-9]*' .hool/operations/metrics.md | grep -o '[0-9]*')
 if [ "$BEFORE" = "$AFTER" ]; then
   pass "track-prompt-count.sh ignores non-Agent tool calls for dispatch count"
 else
@@ -312,7 +314,12 @@ else
 fi
 
 # 3.9 track-prompt-count.sh does NOT trigger governor for non-multiple-of-3
-rm -f .hool/metrics/dispatch-count.txt
+cat > .hool/operations/metrics.md <<'METRICSEOF'
+# HOOL Metrics
+- Agent dispatches: 0
+- Tool calls: 0
+- User prompts: 0
+METRICSEOF
 echo '{"tool_name":"Agent","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh > /dev/null 2>&1
 RESULT=$(echo '{"tool_name":"Agent","tool_input":{}}' | bash .hool/hooks/track-prompt-count.sh 2>/dev/null)
 if echo "$RESULT" | grep -q "GOVERNOR CHECK"; then
@@ -321,9 +328,13 @@ else
   pass "track-prompt-count.sh does NOT trigger governor at count 2"
 fi
 
-# Clean up for remaining tests
-rm -f .hool/metrics/dispatch-count.txt
-rm -f .hool/metrics/prompt-count.log
+# Clean up metrics for remaining tests
+cat > .hool/operations/metrics.md <<'METRICSEOF'
+# HOOL Metrics
+- Agent dispatches: 0
+- Tool calls: 0
+- User prompts: 0
+METRICSEOF
 
 # 3.10 inject-pl-context.sh outputs valid JSON
 RESULT=$(bash .hool/hooks/inject-pl-context.sh 2>/dev/null)
@@ -375,15 +386,17 @@ else
   fail "pre-compact.sh did not create snapshot file"
 fi
 
-# 3.11 suggest-compact.sh tracks tool calls
-rm -f .hool/metrics/tool-call-count.txt
-bash .hool/hooks/suggest-compact.sh > /dev/null 2>&1
-COUNT=$(cat .hool/metrics/tool-call-count.txt 2>/dev/null | tr -d '\n')
-if [ "$COUNT" = "1" ]; then
-  pass "suggest-compact.sh increments tool call count"
+# 3.11 suggest-compact.sh reads tool calls from metrics.md and suggests at threshold
+# Set tool calls to exactly the threshold (default 50)
+sed -i '' 's/Tool calls: [0-9]*/Tool calls: 50/' .hool/operations/metrics.md
+RESULT=$(bash .hool/hooks/suggest-compact.sh 2>&1)
+if echo "$RESULT" | grep -qi "compact"; then
+  pass "suggest-compact.sh suggests compact at threshold"
 else
-  fail "suggest-compact.sh count wrong" "Expected 1, got: $COUNT"
+  fail "suggest-compact.sh did not suggest compact at threshold" "Got: $RESULT"
 fi
+# Reset
+sed -i '' 's/Tool calls: [0-9]*/Tool calls: 0/' .hool/operations/metrics.md
 
 # 3.12 agent-checklist.sh outputs valid JSON (upgraded from plain text)
 RESULT=$(bash .hool/hooks/agent-checklist.sh 2>/dev/null)
@@ -1000,6 +1013,105 @@ else
   fail "CLI source missing MCP restart warning"
 fi
 rm -rf /tmp/hool-mcp-test
+
+# ============================================================
+section "12. CLI DISPATCH MIGRATION"
+# ============================================================
+
+# 12.1 Per-role settings directory exists
+if [ -d ".hool/settings" ]; then
+  pass ".hool/settings directory exists"
+else
+  fail ".hool/settings directory missing"
+fi
+
+# 12.2 Per-role settings files exist for all 7 subagents
+for role in be-dev be-tech-lead fe-dev fe-tech-lead qa forensic governor; do
+  if [ -f ".hool/settings/${role}.json" ]; then
+    pass ".hool/settings/${role}.json exists"
+  else
+    fail ".hool/settings/${role}.json missing"
+  fi
+done
+
+# 12.3 Per-role settings are valid JSON
+for role in be-dev be-tech-lead fe-dev fe-tech-lead qa forensic governor; do
+  if python3 -c "import json; json.load(open('.hool/settings/${role}.json'))" 2>/dev/null; then
+    pass "${role}.json is valid JSON"
+  else
+    fail "${role}.json is not valid JSON"
+  fi
+done
+
+# 12.4 Per-role settings do NOT contain PL-specific hooks
+for role in be-dev be-tech-lead fe-dev fe-tech-lead qa forensic governor; do
+  if ! grep -q "block-pl-src-write" ".hool/settings/${role}.json" 2>/dev/null; then
+    pass "${role}.json excludes block-pl-src-write hook"
+  else
+    fail "${role}.json should not contain PL-specific block-pl-src-write hook"
+  fi
+done
+
+# 12.5 claude-settings.json is NOT copied to .hool/settings/
+if [ ! -f ".hool/settings/claude-settings.json" ]; then
+  pass "claude-settings.json not in .hool/settings/ (correct — goes to .claude/settings.json)"
+else
+  fail "claude-settings.json should not be in .hool/settings/"
+fi
+
+# 12.6 Agent prompts contain HOOL Project Context section
+for agent in be-dev be-tech-lead fe-dev fe-tech-lead qa forensic governor; do
+  if grep -q "HOOL Project Context" ".claude/agents/${agent}.md" 2>/dev/null; then
+    pass "${agent}.md has HOOL Project Context section"
+  else
+    fail "${agent}.md missing HOOL Project Context section"
+  fi
+done
+
+# 12.7 Agent prompts contain MCP tools info
+for agent in be-dev be-tech-lead fe-dev fe-tech-lead qa forensic governor; do
+  if grep -q "mcp__context7" ".claude/agents/${agent}.md" 2>/dev/null; then
+    pass "${agent}.md has MCP tools reference"
+  else
+    fail "${agent}.md missing MCP tools reference"
+  fi
+done
+
+# 12.8 Agent prompts contain "Never run git commands" rule
+for agent in be-dev be-tech-lead fe-dev fe-tech-lead qa forensic governor; do
+  if grep -qi "never run git" ".claude/agents/${agent}.md" 2>/dev/null; then
+    pass "${agent}.md has git prohibition rule"
+  else
+    fail "${agent}.md missing git prohibition rule"
+  fi
+done
+
+# 12.9 CLAUDE.md references CLI dispatch (not Agent tool dispatch)
+if grep -q "env -u CLAUDECODE claude -p" "CLAUDE.md" 2>/dev/null; then
+  pass "CLAUDE.md has CLI dispatch command"
+else
+  fail "CLAUDE.md missing CLI dispatch command"
+fi
+
+if grep -q "dispatched by the Product Lead via CLI" "CLAUDE.md" 2>/dev/null; then
+  pass "CLAUDE.md mentions CLI dispatch (not subagents)"
+else
+  fail "CLAUDE.md should mention CLI dispatch"
+fi
+
+# 12.10 CLAUDE.md does NOT use --setting-sources flag
+if ! grep -q "setting-sources" "CLAUDE.md" 2>/dev/null; then
+  pass "CLAUDE.md does not use --setting-sources (correctly removed)"
+else
+  fail "CLAUDE.md should not contain --setting-sources flag"
+fi
+
+# 12.11 Governor rules include single-instance dispatch rule
+if grep -q "Never dispatch multiple instances of the same agent" ".hool/operations/governor-rules.md" 2>/dev/null; then
+  pass "Governor rules include single-instance dispatch rule"
+else
+  fail "Governor rules missing single-instance dispatch rule"
+fi
 
 # ============================================================
 # RESULTS
