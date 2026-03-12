@@ -71,6 +71,7 @@ export async function scaffoldProject(projectDir: string, projectType: ProjectTy
   await fs.mkdir(path.join(projectDir, '.hool/operations'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/operations/context'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/operations/dispatch'), { recursive: true });
+  await fs.mkdir(path.join(projectDir, '.hool/operations/logs'), { recursive: true });
   const opTemplates = getOperationTemplates(mode);
   for (const [filename, content] of Object.entries(opTemplates)) {
     await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
@@ -118,6 +119,7 @@ export async function scaffoldOnboard(projectDir: string, projectType: ProjectTy
   await fs.mkdir(path.join(projectDir, '.hool/operations'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/operations/context'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/operations/dispatch'), { recursive: true });
+  await fs.mkdir(path.join(projectDir, '.hool/operations/logs'), { recursive: true });
   const opTemplates = getOnboardOperationTemplates(mode);
   for (const [filename, content] of Object.entries(opTemplates)) {
     await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');

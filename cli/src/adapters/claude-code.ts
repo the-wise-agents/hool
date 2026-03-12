@@ -45,12 +45,16 @@ env -u CLAUDECODE claude -p \\
   --agent <role> \\
   --settings .hool/settings/<role>.json \\
   --model opus \\
+  --output-format stream-json \\
+  --verbose \\
   --dangerously-skip-permissions \\
   --no-session-persistence \\
-  "<task prompt>"
+  "<task prompt>" \\
+  > .hool/operations/logs/<TASK-ID>.jsonl 2>&1
 \`\`\`
 
 Each dispatched agent runs as a FULL independent session — full MCP access, full hooks, own context window.
+Output streams as real-time JSON to the log file — read it mid-execution to monitor progress.
 See the orchestrator prompt below for full dispatch documentation.
 
 ### Agent Registry

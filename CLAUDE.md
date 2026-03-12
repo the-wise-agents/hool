@@ -23,12 +23,16 @@ env -u CLAUDECODE claude -p \
   --agent <role> \
   --settings .hool/settings/<role>.json \
   --model opus \
+  --output-format stream-json \
+  --verbose \
   --dangerously-skip-permissions \
   --no-session-persistence \
-  "<task prompt>"
+  "<task prompt>" \
+  > .hool/operations/logs/<TASK-ID>.jsonl 2>&1
 ```
 
 Each dispatched agent runs as a FULL independent session — full MCP access, full hooks, own context window.
+Output streams as real-time JSON to the log file — read it mid-execution to monitor progress.
 See the orchestrator prompt below for full dispatch documentation.
 
 ### Agent Registry
@@ -185,9 +189,12 @@ env -u CLAUDECODE claude -p \
   --agent <role> \
   --settings .hool/settings/<role>.json \
   --model opus \
+  --output-format stream-json \
+  --verbose \
   --dangerously-skip-permissions \
   --no-session-persistence \
-  "<task prompt — include dispatch brief path and key file paths>"
+  "<task prompt>" \
+  > .hool/operations/logs/<TASK-ID>.jsonl 2>&1
 ```
 
 ### Parameters
@@ -195,9 +202,42 @@ env -u CLAUDECODE claude -p \
 - `--agent <role>` — the agent role name (e.g., `be-dev`, `fe-tech-lead`, `governor`). The `--agent` flag overrides CLAUDE.md identity — agents correctly identify as their role, not as Product Lead.
 - `--settings .hool/settings/<role>.json` — role-specific settings file with hooks and permissions
 - `--model opus` — model override
+- `--output-format stream-json --verbose` — stream real-time JSON events (init, thinking, tool calls, text, result) to the log file. Read this file mid-execution to monitor agent progress, detect hangs, and verify behavior.
 - `--dangerously-skip-permissions` — bypass all permission checks for autonomous execution (agents run non-interactively and cannot prompt for permissions)
 - `--no-session-persistence` — don't persist the session after completion
+- `> .hool/operations/logs/<TASK-ID>.jsonl` — redirect all output to a per-task log file for real-time monitoring and post-execution review
 - The task prompt should include: what to do, the dispatch brief path, and key file paths the agent needs to read
+
+### Monitoring Active Agents
+While an agent runs (foreground or background), read its log:
+```bash
+# Check latest activity
+tail -5 .hool/operations/logs/TASK-008.jsonl
+
+# Check if agent finished (look for "type":"result")
+grep '"type":"result"' .hool/operations/logs/TASK-008.jsonl
+```
+
+### Background Dispatch (Parallel Agents)
+For phases that support parallel execution (5+6, 8a+8b):
+```bash
+# Dispatch in background
+env -u CLAUDECODE claude -p \
+  --agent fe-dev ... \
+  > .hool/operations/logs/TASK-010.jsonl 2>&1 &
+FE_PID=$!
+
+env -u CLAUDECODE claude -p \
+  --agent be-dev ... \
+  > .hool/operations/logs/TASK-011.jsonl 2>&1 &
+BE_PID=$!
+
+# Monitor both
+tail -1 .hool/operations/logs/TASK-010.jsonl .hool/operations/logs/TASK-011.jsonl
+
+# Wait for both to finish
+wait $FE_PID $BE_PID
+```
 
 ### Example
 ```bash
@@ -205,9 +245,12 @@ env -u CLAUDECODE claude -p \
   --agent be-dev \
   --settings .hool/settings/be-dev.json \
   --model opus \
+  --output-format stream-json \
+  --verbose \
   --dangerously-skip-permissions \
   --no-session-persistence \
-  "Read the dispatch brief at .hool/operations/context/TASK-008.md and execute the task. Key files: hool-mini/prompts/orchestrator.md"
+  "Read the dispatch brief at .hool/operations/context/TASK-008.md and execute the task. Key files: hool-mini/prompts/orchestrator.md" \
+  > .hool/operations/logs/TASK-008.jsonl 2>&1
 ```
 
 ---
