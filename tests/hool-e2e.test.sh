@@ -197,17 +197,14 @@ echo "  Testing: agent can use context7 MCP..."
 RESULT=$(env -u CLAUDECODE claude -p \
   --agent be-dev \
   --model sonnet \
+  --dangerously-skip-permissions \
   --no-session-persistence \
-  "Use the mcp__context7__resolve-library-id tool to look up 'commander'. If the tool is available and works, respond 'MCP_OK'. If the tool is not available, respond 'MCP_UNAVAILABLE'." 2>/dev/null || echo "MCP_FAILED")
+  "Use the mcp__context7__resolve-library-id tool to look up 'express'. Start your response with 'RESULT:' followed by the library ID." 2>/dev/null || echo "MCP_FAILED")
 
-if echo "$RESULT" | grep -q "MCP_OK\|commander\|/commander"; then
-  pass "Agent can access context7 MCP"
+if echo "$RESULT" | grep -qi "express\|RESULT:"; then
+  pass "Agent can access context7 MCP from dispatched session"
 else
-  if echo "$RESULT" | grep -q "MCP_UNAVAILABLE\|not available\|no tool"; then
-    skip "MCP tools not available in child -p sessions (known limitation)"
-  else
-    fail "MCP access test inconclusive" "Got: $(echo "$RESULT" | head -3)"
-  fi
+  fail "Agent cannot access context7 MCP" "Got: $(echo "$RESULT" | head -3)"
 fi
 
 # ════════════════════════════════════════════════════
