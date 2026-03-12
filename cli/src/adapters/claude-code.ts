@@ -45,9 +45,8 @@ env -u CLAUDECODE claude -p \\
   --agent <role> \\
   --settings .hool/settings/<role>.json \\
   --model opus \\
-  --permission-mode auto \\
+  --dangerously-skip-permissions \\
   --no-session-persistence \\
-  --max-budget-usd <cap> \\
   "<task prompt>"
 \`\`\`
 

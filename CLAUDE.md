@@ -23,9 +23,8 @@ env -u CLAUDECODE claude -p \
   --agent <role> \
   --settings .hool/settings/<role>.json \
   --model opus \
-  --permission-mode auto \
+  --dangerously-skip-permissions \
   --no-session-persistence \
-  --max-budget-usd <cap> \
   "<task prompt>"
 ```
 
@@ -186,9 +185,8 @@ env -u CLAUDECODE claude -p \
   --agent <role> \
   --settings .hool/settings/<role>.json \
   --model opus \
-  --permission-mode auto \
+  --dangerously-skip-permissions \
   --no-session-persistence \
-  --max-budget-usd <cap> \
   "<task prompt — include dispatch brief path and key file paths>"
 ```
 
@@ -197,20 +195,9 @@ env -u CLAUDECODE claude -p \
 - `--agent <role>` — the agent role name (e.g., `be-dev`, `fe-tech-lead`, `governor`). The `--agent` flag overrides CLAUDE.md identity — agents correctly identify as their role, not as Product Lead.
 - `--settings .hool/settings/<role>.json` — role-specific settings file with hooks and permissions
 - `--model opus` — model override
-- `--permission-mode auto` — no permission prompts during autonomous execution
+- `--dangerously-skip-permissions` — bypass all permission checks for autonomous execution (agents run non-interactively and cannot prompt for permissions)
 - `--no-session-persistence` — don't persist the session after completion
-- `--max-budget-usd <cap>` — spending cap per dispatch (set based on task complexity)
 - The task prompt should include: what to do, the dispatch brief path, and key file paths the agent needs to read
-
-### Budget Caps (recommended)
-| Task Type | Budget |
-|---|---|
-| Trivial (1 file, obvious fix) | $0.50 |
-| Small (1-3 files) | $1.00 |
-| Medium (3-10 files, new behavior) | $3.00 |
-| Large (scaffold, LLD, multi-service) | $5.00 |
-| Tech Lead review / QA execution | $3.00 |
-| Governor audit | $1.00 |
 
 ### Example
 ```bash
@@ -218,9 +205,8 @@ env -u CLAUDECODE claude -p \
   --agent be-dev \
   --settings .hool/settings/be-dev.json \
   --model opus \
-  --permission-mode auto \
+  --dangerously-skip-permissions \
   --no-session-persistence \
-  --max-budget-usd 3.00 \
   "Read the dispatch brief at .hool/operations/context/TASK-008.md and execute the task. Key files: hool-mini/prompts/orchestrator.md"
 ```
 
