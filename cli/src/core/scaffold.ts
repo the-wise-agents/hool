@@ -91,6 +91,7 @@ export async function scaffoldProject(projectDir: string, projectType: ProjectTy
   await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/metrics'), { recursive: true });
+  await fs.mkdir(path.join(projectDir, '.hool/settings'), { recursive: true });
 
   // NOTE: src/, tests/ are NOT created here.
   // Those are project concerns decided during architecture (Phase 4)
@@ -137,6 +138,7 @@ export async function scaffoldOnboard(projectDir: string, projectType: ProjectTy
   await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/metrics'), { recursive: true });
+  await fs.mkdir(path.join(projectDir, '.hool/settings'), { recursive: true });
 }
 
 export async function reonboard(projectDir: string, mode: ExecutionMode = 'interactive'): Promise<void> {
@@ -411,6 +413,20 @@ export async function copyPlatformFiles(projectDir: string, templateRootDir: str
       for (const entry of checklistEntries) {
         if (!entry.endsWith('.md')) continue;
         await fs.copyFile(path.join(checklistsSrc, entry), path.join(checklistsDest, entry));
+      }
+    } catch { /* ok */ }
+
+    // Copy per-role settings to .hool/settings/
+    const roleSettingsSrc = path.join(hoolMiniDir, 'settings');
+    const roleSettingsDest = path.join(projectDir, '.hool/settings');
+    await fs.mkdir(roleSettingsDest, { recursive: true });
+    try {
+      const settingsEntries = await fs.readdir(roleSettingsSrc);
+      for (const entry of settingsEntries) {
+        // Skip the PL settings file (claude-settings.json) — it goes to .claude/settings.json
+        if (entry === 'claude-settings.json') continue;
+        if (!entry.endsWith('.json')) continue;
+        await fs.copyFile(path.join(roleSettingsSrc, entry), path.join(roleSettingsDest, entry));
       }
     } catch { /* ok */ }
   }

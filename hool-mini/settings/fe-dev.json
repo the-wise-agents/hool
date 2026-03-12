@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".hool/hooks/agent-checklist.sh",
+            "timeout": 5
+          }
+        ],
+        "description": "Operational checklist reminder after completing work"
+      }
+    ]
+  }
+}

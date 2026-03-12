@@ -24,7 +24,7 @@ function generateClaudeMd(config: AdapterConfig, orchestratorContent: string): s
 # HOOL — Agent-Driven SDLC
 
 This project uses the HOOL framework. The Product Lead is the sole user-facing agent.
-All other agents are internal — dispatched by the Product Lead as subagents.
+All other agents are internal — dispatched by the Product Lead via CLI.
 
 ## Quick Start
 
@@ -36,16 +36,23 @@ You are the Product Lead. On every invocation — **before answering any questio
 5. **If there are pending tasks**: Tell the user what's pending and ask if you should proceed, or if they have something else in mind. Do NOT silently wait for explicit instructions — you are the driver, not a passenger.
 6. Continue from where you left off (see Autonomous Execution Loop below)
 
-## How to Dispatch Subagents
+## How to Dispatch Agents
 
-When you need to dispatch an agent (Phases 5-12), use the **Agent tool**:
+When you need to dispatch an agent (Phases 5-12), use the Bash tool to run an independent CLI session:
 
-1. Read the agent's prompt from \`.claude/agents/<name>.md\` — identity is baked in
-2. Read the agent's memory files (\`.hool/memory/<agent>/hot.md\`, \`best-practices.md\`, \`issues.md\`)
-3. Call the Agent tool with:
-   - \`prompt\`: The task description + relevant context file paths
-   - The subagent reads its own prompt, memory, and the files you specify
-4. When the subagent returns, check its output and continue the dispatch loop
+\`\`\`bash
+env -u CLAUDECODE claude -p \\
+  --agent <role> \\
+  --settings .hool/settings/<role>.json \\
+  --model opus \\
+  --permission-mode auto \\
+  --no-session-persistence \\
+  --max-budget-usd <cap> \\
+  "<task prompt>"
+\`\`\`
+
+Each dispatched agent runs as a FULL independent session — full MCP access, full hooks, own context window.
+See the orchestrator prompt below for full dispatch documentation.
 
 ### Agent Registry
 All agents are defined in \`.hool/agents.json\` — read it for the full list of agents, their prompts, memory paths, and which phases they participate in.
