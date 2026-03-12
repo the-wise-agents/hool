@@ -61,8 +61,9 @@ After the last interactive phase, the human is OUT. You run this loop autonomous
    b. Before any file edit: verify the file is in your writable paths. If not, dispatch the owning agent.
    c. Write a dispatch brief to `.hool/operations/context/TASK-XXX.md` with: what you need, why, which files matter, constraints from client-preferences.md
    d. Dispatch the assigned agent via CLI (see How to Dispatch Agents below) with the dispatch brief path and key file paths in the task prompt
-   c. Agent finishes — check its output
-   d. Verify: did the agent produce what was expected? Are files consistent?
+   c. Agent finishes — run Post-Dispatch Health Check (see below)
+   d. If health check fails (context overflow, error, crash) — handle per the failure table, re-dispatch if needed
+   e. Verify: did the agent produce what was expected? Cross-check the agent's completion report against `git diff`.
    e. Mark task complete on task-board.md
    f. Commit: Stage the agent's modified files and commit with message:
       "[description] (agent-name, TASK-XXX)"
@@ -133,8 +134,24 @@ env -u CLAUDECODE claude -p \
   --dangerously-skip-permissions \
   --no-session-persistence \
   "<task prompt>" \
-  > .hool/operations/logs/<TASK-ID>.jsonl 2>&1
+  > .hool/operations/logs/<TASK-ID>-<agent>-<NN>.jsonl 2>&1
 ```
+
+### Log File Naming Convention
+Log files follow the pattern: `TASK-XXX-<agent>-NN.jsonl`
+- `TASK-XXX` — links to task board entry
+- `<agent>` — the agent role that ran (e.g., `be-dev`, `qa`, `governor`)
+- `NN` — attempt number, zero-padded (01, 02, 03...)
+
+Examples:
+- `TASK-008-be-dev-01.jsonl` — first attempt
+- `TASK-008-be-dev-02.jsonl` — re-dispatch after context overflow
+- `TASK-008-fe-dev-03.jsonl` — re-dispatch to different agent after forensic re-routing
+
+Useful queries:
+- `ls logs/TASK-008*` — all attempts for a task
+- `ls logs/*be-dev*` — all be-dev runs
+- `ls logs/*-01.jsonl` — all first attempts
 
 ### Parameters
 - `env -u CLAUDECODE` — required to unset the parent session marker so the child session initializes correctly
@@ -144,18 +161,53 @@ env -u CLAUDECODE claude -p \
 - `--output-format stream-json --verbose` — stream real-time JSON events (init, thinking, tool calls, text, result) to the log file. The PL can read this file mid-execution to monitor agent progress, detect hangs, and verify behavior.
 - `--dangerously-skip-permissions` — bypass all permission checks for autonomous execution (agents run non-interactively and cannot prompt for permissions)
 - `--no-session-persistence` — don't persist the session after completion
-- `> .hool/operations/logs/<TASK-ID>.jsonl` — redirect all output to a per-task log file for real-time monitoring and post-execution review
+- `> .hool/operations/logs/<TASK-ID>-<agent>-<NN>.jsonl` — redirect all output to a per-dispatch log file. Naming encodes task, agent, and attempt for easy filtering.
 - The task prompt should include: what to do, the dispatch brief path, and key file paths the agent needs to read
 
 ### Monitoring Active Agents
 While an agent runs (foreground or background), read its log:
 ```bash
 # Check latest activity
-tail -5 .hool/operations/logs/TASK-008.jsonl
+tail -5 .hool/operations/logs/TASK-008-be-dev-01.jsonl
 
 # Check if agent finished (look for "type":"result")
-grep '"type":"result"' .hool/operations/logs/TASK-008.jsonl
+grep '"type":"result"' .hool/operations/logs/TASK-008-be-dev-01.jsonl
 ```
+
+### Post-Dispatch Health Check
+After every agent dispatch completes, run these checks on the log file **before** marking the task complete:
+
+```bash
+# 1. Check completion status
+grep '"type":"result"' .hool/operations/logs/TASK-008-be-dev-01.jsonl
+
+# 2. Check for context overflow (agent ran out of context space)
+grep -q '"stop_reason":"model_context_window_exceeded"' .hool/operations/logs/TASK-008-be-dev-01.jsonl && echo "CONTEXT OVERFLOW"
+
+# 3. Check for output token limit hit (response truncated)
+grep -q '"stop_reason":"max_tokens"' .hool/operations/logs/TASK-008-be-dev-01.jsonl && echo "MAX TOKENS HIT"
+
+# 4. Check for errors
+grep -q '"is_error":true' .hool/operations/logs/TASK-008-be-dev-01.jsonl && echo "AGENT ERROR"
+```
+
+**Handling failures:**
+
+| Signal | Meaning | Action |
+|---|---|---|
+| `model_context_window_exceeded` | Agent's context filled up — work likely incomplete | Split the task into smaller sub-tasks and re-dispatch. Log `[CONTEXT-OVERFLOW]` to cold log. |
+| `max_tokens` | Agent hit output token limit — response truncated | Re-dispatch with instruction to continue from where it left off. Log `[MAX-TOKENS]` to cold log. |
+| `is_error: true` | Agent encountered an error | Read the error from the result event. Fix the cause (missing file, permission issue, etc.) and re-dispatch. Log `[AGENT-ERROR]` to cold log. |
+| No `"type":"result"` found | Agent crashed or was killed | Check process status. Re-dispatch if needed. Log `[AGENT-CRASH]` to cold log. |
+| `stop_reason: "end_turn"` | Normal completion | Proceed with verification. |
+
+### Agent Completion Report
+All agents are required to output a **completion report** as the last thing they do. Parse this from the agent's final text output in the log to verify:
+- Which files were created/modified/deleted
+- Whether the task scope was respected (no unexpected file changes)
+- Any issues or blockers the agent encountered
+
+If the agent's reported files don't match the actual `git diff` after the agent ran, investigate before committing.
 
 ### Background Dispatch (Parallel Agents)
 For phases that support parallel execution (5+6, 8a+8b):
@@ -163,16 +215,16 @@ For phases that support parallel execution (5+6, 8a+8b):
 # Dispatch in background — append & to the command
 env -u CLAUDECODE claude -p \
   --agent fe-dev ... \
-  > .hool/operations/logs/TASK-010.jsonl 2>&1 &
+  > .hool/operations/logs/TASK-010-fe-dev-01.jsonl 2>&1 &
 FE_PID=$!
 
 env -u CLAUDECODE claude -p \
   --agent be-dev ... \
-  > .hool/operations/logs/TASK-011.jsonl 2>&1 &
+  > .hool/operations/logs/TASK-011-be-dev-01.jsonl 2>&1 &
 BE_PID=$!
 
 # Monitor both
-tail -1 .hool/operations/logs/TASK-010.jsonl .hool/operations/logs/TASK-011.jsonl
+tail -1 .hool/operations/logs/TASK-010-fe-dev-01.jsonl .hool/operations/logs/TASK-011-be-dev-01.jsonl
 
 # Wait for both to finish
 wait $FE_PID $BE_PID
@@ -189,7 +241,7 @@ env -u CLAUDECODE claude -p \
   --dangerously-skip-permissions \
   --no-session-persistence \
   "Read the dispatch brief at .hool/operations/context/TASK-008.md and execute the task. Key files: hool-mini/prompts/orchestrator.md" \
-  > .hool/operations/logs/TASK-008.jsonl 2>&1
+  > .hool/operations/logs/TASK-008-be-dev-01.jsonl 2>&1
 ```
 
 ---

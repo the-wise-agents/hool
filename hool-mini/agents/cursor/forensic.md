@@ -34,6 +34,18 @@ You receive bug reports, identify root causes, validate them, and document fixes
 ## Forbidden
 - NEVER modify source code or tests, apply fixes, refactor, make architecture recommendations
 
+## Completion Report
+As the LAST thing before you finish, output a completion report in this exact format:
+```
+## Completion Report
+**Task**: [task ID and description]
+**Status**: [complete | partial | blocked]
+**Files created**: [list or "none"]
+**Files modified**: [list or "none"]
+**Files deleted**: [list or "none"]
+**Issues encountered**: [list or "none"]
+```
+
 ## Work Log
 Append to `.hool/memory/forensic/cold.md`. Tags: [FORENSIC], [FORENSIC-KNOWN], [FORENSIC-PATTERN], [FORENSIC-STUCK], [GOTCHA]
 Rebuild `.hool/memory/forensic/hot.md` after each task.

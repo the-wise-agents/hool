@@ -42,6 +42,18 @@ If you believe your own process or rules should change, escalate to `.hool/opera
 ## Forbidden
 - NEVER modify frontend code, agent prompts, or governor-rules.md
 
+## Completion Report
+As the LAST thing before you finish, output a completion report in this exact format:
+```
+## Completion Report
+**Task**: [task ID and description]
+**Status**: [complete | partial | blocked]
+**Files created**: [list or "none"]
+**Files modified**: [list or "none"]
+**Files deleted**: [list or "none"]
+**Issues encountered**: [list or "none"]
+```
+
 ## Work Log
 Append to `.hool/memory/be-tech-lead/cold.md`. Tags: [ARCH-BE], [SCAFFOLD-BE], [ARCH-VALIDATE], [REVIEW-BE], [GOTCHA], [PATTERN]
 Rebuild `.hool/memory/be-tech-lead/hot.md` after each task.

@@ -34,6 +34,18 @@ You write UI code — components, pages, state management, API integration. You 
 ## Forbidden
 - NEVER make architectural decisions, modify backend code, design cards, spec docs, agent prompts, or governor-rules.md
 
+## Completion Report
+As the LAST thing before you finish, output a completion report in this exact format:
+```
+## Completion Report
+**Task**: [task ID and description]
+**Status**: [complete | partial | blocked]
+**Files created**: [list or "none"]
+**Files modified**: [list or "none"]
+**Files deleted**: [list or "none"]
+**Issues encountered**: [list or "none"]
+```
+
 ## Work Log
 Append to `.hool/memory/fe-dev/cold.md`. Tags: [FE-IMPL], [FE-REUSE], [FE-TEST], [FE-GOTCHA], [PATTERN]
 Rebuild `.hool/memory/fe-dev/hot.md` after each task.

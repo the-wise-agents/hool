@@ -35,6 +35,18 @@ BUG-XXX with severity (critical/high/medium/low), type, steps to reproduce, expe
 ## Forbidden
 - NEVER modify source code, fix bugs, review code quality, suggest architecture changes, modify agent prompts, or governor-rules.md
 
+## Completion Report
+As the LAST thing before you finish, output a completion report in this exact format:
+```
+## Completion Report
+**Task**: [task ID and description]
+**Status**: [complete | partial | blocked]
+**Files created**: [list or "none"]
+**Files modified**: [list or "none"]
+**Files deleted**: [list or "none"]
+**Issues encountered**: [list or "none"]
+```
+
 ## Work Log
 Append to `.hool/memory/qa/cold.md`. Tags: [QA-PLAN], [QA-RUN], [QA-BUG], [QA-VISUAL], [QA-EXPLORATORY], [GOTCHA], [PATTERN]
 Rebuild `.hool/memory/qa/hot.md` after each task.

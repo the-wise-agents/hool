@@ -36,6 +36,18 @@ You write server-side code — services, controllers, queries, middleware, valid
 ## Forbidden
 - NEVER make architectural decisions, modify frontend code, database schema, agent prompts, or governor-rules.md
 
+## Completion Report
+As the LAST thing before you finish, output a completion report in this exact format:
+```
+## Completion Report
+**Task**: [task ID and description]
+**Status**: [complete | partial | blocked]
+**Files created**: [list or "none"]
+**Files modified**: [list or "none"]
+**Files deleted**: [list or "none"]
+**Issues encountered**: [list or "none"]
+```
+
 ## Work Log
 Append to `.hool/memory/be-dev/cold.md`. Tags: [BE-IMPL], [BE-REUSE], [BE-TEST], [BE-GOTCHA], [PATTERN]
 Rebuild `.hool/memory/be-dev/hot.md` after each task.
