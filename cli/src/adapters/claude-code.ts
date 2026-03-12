@@ -50,7 +50,7 @@ env -u CLAUDECODE claude -p \\
   --dangerously-skip-permissions \\
   --no-session-persistence \\
   "<task prompt>" \\
-  > .hool/operations/logs/<TASK-ID>.jsonl 2>&1
+  > .hool/operations/logs/<TASK-ID>-<agent>-<NN>.jsonl 2>&1
 \`\`\`
 
 Each dispatched agent runs as a FULL independent session — full MCP access, full hooks, own context window.

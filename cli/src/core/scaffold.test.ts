@@ -12,6 +12,7 @@ import {
   copySkills,
   copyChecklists,
 } from './scaffold.js';
+import * as scaffoldExports from './scaffold.js';
 
 let tmpDir: string;
 
@@ -387,5 +388,27 @@ describe('copyChecklists', () => {
     expect(await fs.readFile(path.join(projectDir, '.hool/checklists/review.md'), 'utf-8')).toBe('# Review');
 
     await fs.rm(projectDir, { recursive: true, force: true });
+  });
+});
+
+describe('copyPrompts removal', () => {
+  it('does not export copyPrompts', () => {
+    expect(scaffoldExports).not.toHaveProperty('copyPrompts');
+  });
+});
+
+describe('scaffoldProject .gitignore', () => {
+  it('creates .hool/operations/logs/.gitignore with *.jsonl', async () => {
+    await scaffoldProject(tmpDir, 'web-app');
+    const gitignore = await fs.readFile(path.join(tmpDir, '.hool/operations/logs/.gitignore'), 'utf-8');
+    expect(gitignore).toContain('*.jsonl');
+  });
+});
+
+describe('scaffoldOnboard .gitignore', () => {
+  it('creates .hool/operations/logs/.gitignore with *.jsonl', async () => {
+    await scaffoldOnboard(tmpDir, 'web-app');
+    const gitignore = await fs.readFile(path.join(tmpDir, '.hool/operations/logs/.gitignore'), 'utf-8');
+    expect(gitignore).toContain('*.jsonl');
   });
 });

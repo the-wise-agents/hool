@@ -119,7 +119,7 @@ program
     await scaffoldProject(projectDir, projectType, mode);
     console.log(chalk.green('  ✓ Project structure created'));
 
-    // 4. Copy platform-specific files (agents, hooks, skills, checklists, settings)
+    // 5. Copy platform-specific files (agents, hooks, skills, checklists, settings)
     console.log(chalk.dim('  Copying platform files (agents, hooks, skills, checklists, settings)...'));
     try {
       await copyPlatformFiles(projectDir, templateRootDir, platform);
@@ -155,7 +155,7 @@ program
       }
     }
 
-    // 7. Write MCP manifest + agent manifest
+    // 8. Write MCP manifest + agent manifest
     const requiredMcps = getRequiredMcpNames(projectType);
     await writeMcpManifest(projectDir, projectType, requiredMcps);
     console.log(chalk.green('  ✓ MCP manifest written to .hool/mcps.json'));
@@ -163,7 +163,7 @@ program
     await writeAgentManifest(projectDir);
     console.log(chalk.green('  ✓ Agent manifest written to .hool/agents.json'));
 
-    // 8. Done
+    // 9. Done
     console.log(chalk.bold.green(`\n  HOOL initialized for: ${projectType}`));
     console.log(chalk.dim(`  Platform: ${platform}`));
     console.log(chalk.dim(`  Mode: ${mode}`));
@@ -281,12 +281,12 @@ program
         console.log(chalk.yellow(`  ⚠ Could not copy platform files (source not found).`));
       }
 
-      // 7. Inject platform instructions
+      // 6. Inject platform instructions
       console.log(chalk.dim(`  Configuring for ${platform}...`));
       await adapter.injectInstructions(config);
       console.log(chalk.green(`  ✓ ${platform} instructions injected`));
 
-      // 8. Check & install MCPs
+      // 7. Check & install MCPs
       if (platform !== 'generic') {
         console.log(chalk.dim('  Checking MCPs...'));
         const results = await checkAndInstallMcps(adapter, config);
@@ -445,8 +445,9 @@ program
       // Governor
       let dispatchCount = 0;
       try {
-        const dc = await fs.readFile(path.join(projectDir, '.hool/metrics/dispatch-count.txt'), 'utf-8');
-        dispatchCount = parseInt(dc.trim()) || 0;
+        const metricsContent = await fs.readFile(path.join(projectDir, '.hool/operations/metrics.md'), 'utf-8');
+        const dispatchMatch = metricsContent.match(/dispatches:\s*(\d+)/);
+        dispatchCount = dispatchMatch ? parseInt(dispatchMatch[1]) || 0 : 0;
       } catch { /* file might not exist */ }
       if (dispatchCount > 0) {
         const sinceLastAudit = dispatchCount % 3;

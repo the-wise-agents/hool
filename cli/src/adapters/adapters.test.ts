@@ -157,6 +157,17 @@ describe('ClaudeCodeAdapter', () => {
       const content = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
       expect(content).toContain('orchestrator.md not found');
     });
+
+    it('uses correct log naming convention with agent and attempt number', async () => {
+      const promptsDir = path.join(tmpDir, 'prompts');
+      await fs.mkdir(promptsDir, { recursive: true });
+      await fs.writeFile(path.join(promptsDir, 'orchestrator.md'), '# Orchestrator');
+
+      await adapter.injectInstructions(makeConfig({ promptsDir }));
+      const content = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
+      expect(content).toContain('<TASK-ID>-<agent>-<NN>.jsonl');
+      expect(content).not.toMatch(/<TASK-ID>\.jsonl/);
+    });
   });
 
   describe('getCompletionMessage', () => {

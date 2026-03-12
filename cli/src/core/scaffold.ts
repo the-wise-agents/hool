@@ -72,6 +72,7 @@ export async function scaffoldProject(projectDir: string, projectType: ProjectTy
   await fs.mkdir(path.join(projectDir, '.hool/operations/context'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/operations/dispatch'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/operations/logs'), { recursive: true });
+  await fs.writeFile(path.join(projectDir, '.hool/operations/logs/.gitignore'), '*.jsonl\n', 'utf-8');
   const opTemplates = getOperationTemplates(mode);
   for (const [filename, content] of Object.entries(opTemplates)) {
     await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
@@ -120,6 +121,7 @@ export async function scaffoldOnboard(projectDir: string, projectType: ProjectTy
   await fs.mkdir(path.join(projectDir, '.hool/operations/context'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/operations/dispatch'), { recursive: true });
   await fs.mkdir(path.join(projectDir, '.hool/operations/logs'), { recursive: true });
+  await fs.writeFile(path.join(projectDir, '.hool/operations/logs/.gitignore'), '*.jsonl\n', 'utf-8');
   const opTemplates = getOnboardOperationTemplates(mode);
   for (const [filename, content] of Object.entries(opTemplates)) {
     await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
@@ -163,27 +165,6 @@ export async function reonboard(projectDir: string, mode: ExecutionMode = 'inter
   await fs.writeFile(taskBoardPath, header + prepend + body, 'utf-8');
 }
 
-/** @deprecated Use copySkills + copyChecklists instead */
-export async function copyPrompts(projectDir: string, promptsSourceDir: string): Promise<void> {
-  // Legacy: copies all prompts to .hool/prompts/ — kept for backwards compat
-  const hoolPromptsDir = path.join(projectDir, '.hool/prompts');
-
-  async function copyDir(src: string, dest: string): Promise<void> {
-    await fs.mkdir(dest, { recursive: true });
-    const entries = await fs.readdir(src, { withFileTypes: true });
-    for (const entry of entries) {
-      const srcPath = path.join(src, entry.name);
-      const destPath = path.join(dest, entry.name);
-      if (entry.isDirectory()) {
-        await copyDir(srcPath, destPath);
-      } else if (entry.name.endsWith('.md')) {
-        await fs.copyFile(srcPath, destPath);
-      }
-    }
-  }
-
-  await copyDir(promptsSourceDir, hoolPromptsDir);
-}
 
 export async function copySkills(projectDir: string, promptsSourceDir: string): Promise<void> {
   const skillsSourceDir = path.join(promptsSourceDir, 'skills');
