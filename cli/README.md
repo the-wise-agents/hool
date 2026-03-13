@@ -13,10 +13,10 @@ You'll be asked three questions:
 2. **Project type** — web app, browser game, mobile, CLI tool, API, desktop, animation, or other
 3. **Mode** — Interactive (you review spec/design/architecture) or Full-HOOL (fully autonomous)
 
-Then open your AI coding tool and tell it:
+Then open your AI coding tool and say:
 
 ```
-Read .hool/prompts/orchestrator.md and begin Phase 1: Brainstorm
+Begin Phase 1: Brainstorm
 ```
 
 ## Install
@@ -35,7 +35,7 @@ npm update -g hool-cli
 
 ### `hool init`
 
-Scaffold HOOL in the current directory. Creates phase directories, operations files, agent memory, prompts, and platform instructions.
+Scaffold HOOL in the current directory. Creates phase directories, operations files, agent memory, hooks, settings, skills, and platform instructions.
 
 ```bash
 hool init
@@ -50,18 +50,18 @@ hool init --dir ./myapp --platform claude-code --type web-app --mode full-hool
 
 ### `hool onboard`
 
-Onboard an existing codebase into HOOL. Scaffolds the full HOOL structure around your existing code (no files are touched), then sets up onboarding tasks for agents to reverse-engineer project docs.
+Onboard an existing codebase into HOOL. Scaffolds the full HOOL structure around your existing code (no files are touched), then sets up 11 onboarding tasks for agents to reverse-engineer project docs.
 
 ```bash
 hool onboard
 hool onboard --dir ./myapp --platform claude-code --type web-app
 ```
 
-If `.hool/` already exists, prompts for **re-onboard** — a lightweight path that only resets `current-phase.md` and prepends onboarding tasks to the task board, preserving all memory and phase docs.
+If `.hool/` already exists, auto-detects and offers **re-onboard** — a lightweight path that only resets `current-phase.md` and prepends onboarding tasks to the task board, preserving all memory and phase docs.
 
 ### `hool status`
 
-Show current phase, task summary, bug count, and human review status.
+Show current phase, task progress bars, per-agent breakdown, bug count, inconsistencies, governor audit status, and human review status.
 
 ```bash
 hool status
@@ -103,15 +103,35 @@ hool mode interactive  # switch to interactive
 | **Forensic** | Root cause analysis, bug triage, fix routing |
 | **Governor** | Behavioral auditor, rule enforcement, corrective feedback |
 
-The Product Lead is the only user-facing agent. All others are dispatched internally. The Governor runs continuously to audit agent behavior.
+The Product Lead is the only user-facing agent. All others are dispatched as independent CLI sessions with their own context windows, MCP access, and role-specific hooks.
+
+## What Gets Created
+
+```
+your-project/
+  .hool/
+    phases/          # Phase docs (spec, design, architecture, LLDs, test plan)
+    operations/      # Live state (task board, bugs, issues, governor rules, logs)
+    memory/          # Per-agent memory (8 agents × 5 memory files each)
+    hooks/           # Platform hooks (context injection, governor triggers)
+    settings/        # Per-role settings (hooks, permissions)
+    checklists/      # Code review checklists
+    agents.json      # Agent manifest
+    mcps.json        # MCP manifest
+  .claude/
+    agents/          # Agent definitions (7 subagents)
+    skills/          # Phase skills (/brainstorm, /spec, /design, /architecture)
+    settings.json    # Product Lead hooks
+  CLAUDE.md          # Full orchestrator prompt (claude-code platform)
+```
 
 ## Supported Platforms
 
 | Platform | Instruction file | MCP support |
 |----------|-----------------|-------------|
-| Claude Code | `CLAUDE.md` | Full (auto-installs) |
-| Cursor | `.cursor/rules/hool.mdc` | Full (auto-installs) |
-| Generic | `.hool/prompts/` only | Manual setup |
+| Claude Code | `CLAUDE.md` | Full (auto-installs to `~/.claude/mcp_servers.json`) |
+| Cursor | `.cursor/rules/hool.mdc` | Full (auto-installs to `~/.cursor/mcp.json`) |
+| Generic | `HOOL-INSTRUCTIONS.md` | Manual setup |
 
 ## Links
 
