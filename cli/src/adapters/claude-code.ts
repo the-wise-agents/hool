@@ -1,12 +1,22 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { createRequire } from 'module';
 import type { Adapter, AdapterConfig, McpDefinition, AgentPlatform } from './types.js';
 
-const CLAUDE_MCP_CONFIG_PATH = path.join(os.homedir(), '.claude', 'mcp_servers.json');
+const execAsync = promisify(exec);
 
-const HOOL_START_MARKER = '<!-- HOOL:START -->';
+const require = createRequire(import.meta.url);
+const { version: HOOL_VERSION } = require('../../package.json');
+
 const HOOL_END_MARKER = '<!-- HOOL:END -->';
+const HOOL_START_PATTERN = /<!-- HOOL:START(?:\s+v[\d.]+)? -->/;
+
+function getHoolStartMarker(version: string): string {
+  return `<!-- HOOL:START v${version} -->`;
+}
 
 function getMcpSection(projectType: string): string {
   const mcps = ['- **context7**: Use `mcp__context7__resolve-library-id` and `mcp__context7__query-docs` for up-to-date library documentation'];
@@ -20,7 +30,7 @@ function getMcpSection(projectType: string): string {
 }
 
 function generateClaudeMd(config: AdapterConfig, orchestratorContent: string): string {
-  return `${HOOL_START_MARKER}
+  return `${getHoolStartMarker(HOOL_VERSION)}
 # HOOL — Agent-Driven SDLC
 
 This project uses the HOOL framework. The Product Lead is the sole user-facing agent.
@@ -109,15 +119,15 @@ export class ClaudeCodeAdapter implements Adapter {
 
     const content = generateClaudeMd(config, orchestratorContent);
 
-    // Replace between markers, append, or create new
+    // Replace between markers, prepend, or create new
     try {
       const existing = await fs.readFile(claudeMdPath, 'utf-8');
-      const startIdx = existing.indexOf(HOOL_START_MARKER);
+      const startMatch = existing.match(HOOL_START_PATTERN);
       const endIdx = existing.indexOf(HOOL_END_MARKER);
 
-      if (startIdx >= 0 && endIdx >= 0) {
-        // Marker-based replacement — clean upgrade path
-        const before = existing.slice(0, startIdx);
+      if (startMatch && endIdx >= 0) {
+        // Marker-based replacement — clean upgrade path (handles both old and versioned markers)
+        const before = existing.slice(0, startMatch.index);
         const after = existing.slice(endIdx + HOOL_END_MARKER.length);
         await fs.writeFile(claudeMdPath, before + content + after, 'utf-8');
       } else if (existing.includes('# HOOL')) {
@@ -125,7 +135,8 @@ export class ClaudeCodeAdapter implements Adapter {
         const legacyIdx = existing.indexOf('# HOOL');
         await fs.writeFile(claudeMdPath, existing.slice(0, legacyIdx) + content, 'utf-8');
       } else {
-        await fs.writeFile(claudeMdPath, existing + '\n\n' + content, 'utf-8');
+        // No markers, no HOOL header — prepend HOOL block so it takes priority (LLMs read top-first)
+        await fs.writeFile(claudeMdPath, content + '\n\n' + existing, 'utf-8');
       }
     } catch {
       await fs.writeFile(claudeMdPath, content, 'utf-8');
@@ -133,26 +144,18 @@ export class ClaudeCodeAdapter implements Adapter {
   }
 
   async installMcp(mcp: McpDefinition): Promise<void> {
-    const configDir = path.dirname(CLAUDE_MCP_CONFIG_PATH);
-    await fs.mkdir(configDir, { recursive: true });
-
-    let config: Record<string, Record<string, unknown>> = {};
-    try {
-      const raw = await fs.readFile(CLAUDE_MCP_CONFIG_PATH, 'utf-8');
-      config = JSON.parse(raw);
-    } catch {
-      // File doesn't exist or is invalid — start fresh
-    }
-
-    config[mcp.name] = mcp.configEntry;
-    await fs.writeFile(CLAUDE_MCP_CONFIG_PATH, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+    const args = (mcp.configEntry as { args?: string[] }).args || [];
+    const command = (mcp.configEntry as { command?: string }).command || 'npx';
+    // Use claude mcp add CLI command — writes to the correct config location (~/.claude.json)
+    const cmd = `claude mcp add --transport stdio --scope user ${mcp.name} -- ${command} ${args.join(' ')}`;
+    await execAsync(cmd);
   }
 
   async isMcpInstalled(mcpName: string): Promise<boolean> {
     try {
-      const raw = await fs.readFile(CLAUDE_MCP_CONFIG_PATH, 'utf-8');
+      const raw = await fs.readFile(path.join(os.homedir(), '.claude.json'), 'utf-8');
       const config = JSON.parse(raw);
-      return mcpName in config;
+      return mcpName in (config.mcpServers || {});
     } catch {
       return false;
     }

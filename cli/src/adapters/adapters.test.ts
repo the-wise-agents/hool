@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
@@ -50,14 +50,14 @@ describe('ClaudeCodeAdapter', () => {
   const adapter = new ClaudeCodeAdapter();
 
   describe('injectInstructions', () => {
-    it('creates CLAUDE.md with HOOL markers', async () => {
+    it('creates CLAUDE.md with versioned HOOL markers', async () => {
       const promptsDir = path.join(tmpDir, 'prompts');
       await fs.mkdir(promptsDir, { recursive: true });
       await fs.writeFile(path.join(promptsDir, 'orchestrator.md'), '# Test Orchestrator');
 
       await adapter.injectInstructions(makeConfig({ promptsDir }));
       const content = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
-      expect(content).toContain('<!-- HOOL:START -->');
+      expect(content).toMatch(/<!-- HOOL:START v\d+\.\d+\.\d+ -->/);
       expect(content).toContain('<!-- HOOL:END -->');
       expect(content).toContain('# Test Orchestrator');
     });
@@ -75,15 +75,15 @@ describe('ClaudeCodeAdapter', () => {
       expect(content).toContain('dispatched by the Product Lead via CLI');
     });
 
-    it('replaces content between existing markers', async () => {
+    it('replaces content between existing versioned markers', async () => {
       const promptsDir = path.join(tmpDir, 'prompts');
       await fs.mkdir(promptsDir, { recursive: true });
       await fs.writeFile(path.join(promptsDir, 'orchestrator.md'), '# Updated');
 
-      // Write initial CLAUDE.md with some user content
+      // Write initial CLAUDE.md with versioned markers
       await fs.writeFile(
         path.join(tmpDir, 'CLAUDE.md'),
-        'User content before\n\n<!-- HOOL:START -->\nOld HOOL content\n<!-- HOOL:END -->\n\nUser content after',
+        'User content before\n\n<!-- HOOL:START v0.7.0 -->\nOld HOOL content\n<!-- HOOL:END -->\n\nUser content after',
       );
 
       await adapter.injectInstructions(makeConfig({ promptsDir }));
@@ -92,18 +92,43 @@ describe('ClaudeCodeAdapter', () => {
       expect(content).toContain('User content after');
       expect(content).toContain('# Updated');
       expect(content).not.toContain('Old HOOL content');
+      expect(content).not.toContain('v0.7.0');
     });
 
-    it('appends to CLAUDE.md without markers', async () => {
+    it('replaces content between old unversioned markers (backward compat)', async () => {
       const promptsDir = path.join(tmpDir, 'prompts');
       await fs.mkdir(promptsDir, { recursive: true });
-      await fs.writeFile(path.join(promptsDir, 'orchestrator.md'), '# Orchestrator');
-      await fs.writeFile(path.join(tmpDir, 'CLAUDE.md'), 'Existing content without markers');
+      await fs.writeFile(path.join(promptsDir, 'orchestrator.md'), '# Upgraded');
+
+      // Write CLAUDE.md with old-style markers (no version)
+      await fs.writeFile(
+        path.join(tmpDir, 'CLAUDE.md'),
+        'Before\n\n<!-- HOOL:START -->\nOld content\n<!-- HOOL:END -->\n\nAfter',
+      );
 
       await adapter.injectInstructions(makeConfig({ promptsDir }));
       const content = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
-      expect(content).toContain('Existing content without markers');
-      expect(content).toContain('<!-- HOOL:START -->');
+      expect(content).toContain('Before');
+      expect(content).toContain('After');
+      expect(content).toContain('# Upgraded');
+      expect(content).not.toContain('Old content');
+      // Should now have versioned marker
+      expect(content).toMatch(/<!-- HOOL:START v\d+\.\d+\.\d+ -->/);
+    });
+
+    it('prepends HOOL block when CLAUDE.md has no markers', async () => {
+      const promptsDir = path.join(tmpDir, 'prompts');
+      await fs.mkdir(promptsDir, { recursive: true });
+      await fs.writeFile(path.join(promptsDir, 'orchestrator.md'), '# Orchestrator');
+      await fs.writeFile(path.join(tmpDir, 'CLAUDE.md'), 'Existing user content');
+
+      await adapter.injectInstructions(makeConfig({ promptsDir }));
+      const content = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
+      expect(content).toContain('Existing user content');
+      // HOOL block should come BEFORE user content (prepended)
+      const hoolIdx = content.indexOf('<!-- HOOL:START');
+      const userIdx = content.indexOf('Existing user content');
+      expect(hoolIdx).toBeLessThan(userIdx);
     });
 
     it('replaces from legacy # HOOL header', async () => {
@@ -116,7 +141,7 @@ describe('ClaudeCodeAdapter', () => {
       const content = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
       expect(content).toContain('User stuff');
       expect(content).not.toContain('Old format content');
-      expect(content).toContain('<!-- HOOL:START -->');
+      expect(content).toMatch(/<!-- HOOL:START v\d+\.\d+\.\d+ -->/);
     });
 
     it('includes MCP section for web-app with playwright', async () => {
@@ -167,6 +192,77 @@ describe('ClaudeCodeAdapter', () => {
       const content = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
       expect(content).toContain('<TASK-ID>-<agent>-<NN>.jsonl');
       expect(content).not.toMatch(/<TASK-ID>\.jsonl/);
+    });
+  });
+
+  describe('isMcpInstalled', () => {
+    it('returns true when MCP exists in ~/.claude.json mcpServers', async () => {
+      const fakeHome = path.join(tmpDir, 'fakehome');
+      await fs.mkdir(fakeHome, { recursive: true });
+      await fs.writeFile(
+        path.join(fakeHome, '.claude.json'),
+        JSON.stringify({ mcpServers: { context7: { command: 'npx' } } }),
+      );
+
+      // Temporarily override os.homedir
+      const origHomedir = os.homedir;
+      os.homedir = () => fakeHome;
+      try {
+        const result = await adapter.isMcpInstalled('context7');
+        expect(result).toBe(true);
+      } finally {
+        os.homedir = origHomedir;
+      }
+    });
+
+    it('returns false when MCP not in ~/.claude.json', async () => {
+      const fakeHome = path.join(tmpDir, 'fakehome');
+      await fs.mkdir(fakeHome, { recursive: true });
+      await fs.writeFile(
+        path.join(fakeHome, '.claude.json'),
+        JSON.stringify({ mcpServers: {} }),
+      );
+
+      const origHomedir = os.homedir;
+      os.homedir = () => fakeHome;
+      try {
+        const result = await adapter.isMcpInstalled('context7');
+        expect(result).toBe(false);
+      } finally {
+        os.homedir = origHomedir;
+      }
+    });
+
+    it('returns false when ~/.claude.json does not exist', async () => {
+      const fakeHome = path.join(tmpDir, 'fakehome-empty');
+      await fs.mkdir(fakeHome, { recursive: true });
+
+      const origHomedir = os.homedir;
+      os.homedir = () => fakeHome;
+      try {
+        const result = await adapter.isMcpInstalled('anything');
+        expect(result).toBe(false);
+      } finally {
+        os.homedir = origHomedir;
+      }
+    });
+
+    it('returns false when ~/.claude.json has no mcpServers key', async () => {
+      const fakeHome = path.join(tmpDir, 'fakehome2');
+      await fs.mkdir(fakeHome, { recursive: true });
+      await fs.writeFile(
+        path.join(fakeHome, '.claude.json'),
+        JSON.stringify({ otherKey: 'value' }),
+      );
+
+      const origHomedir = os.homedir;
+      os.homedir = () => fakeHome;
+      try {
+        const result = await adapter.isMcpInstalled('context7');
+        expect(result).toBe(false);
+      } finally {
+        os.homedir = origHomedir;
+      }
     });
   });
 

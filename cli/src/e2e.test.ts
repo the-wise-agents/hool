@@ -46,7 +46,7 @@ describe('hool init (e2e)', () => {
 
     // Verify CLAUDE.md
     const claudeMd = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
-    expect(claudeMd).toContain('<!-- HOOL:START -->');
+    expect(claudeMd).toMatch(/<!-- HOOL:START v\d+\.\d+\.\d+ -->/);
     expect(claudeMd).toContain('<!-- HOOL:END -->');
 
     // Verify agents.json
