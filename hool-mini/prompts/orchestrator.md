@@ -61,19 +61,19 @@ After the last interactive phase, the human is OUT. You run this loop autonomous
    b. Before any file edit: verify the file is in your writable paths. If not, dispatch the owning agent.
    c. Write a dispatch brief to `.hool/operations/context/TASK-XXX.md` with: what you need, why, which files matter, constraints from client-preferences.md
    d. Dispatch the assigned agent via CLI (see How to Dispatch Agents below) with the dispatch brief path and key file paths in the task prompt
-   c. Agent finishes — run Post-Dispatch Health Check (see below)
-   d. If health check fails (context overflow, error, crash) — handle per the failure table, re-dispatch if needed
-   e. Verify: did the agent produce what was expected? Cross-check the agent's completion report against `git diff`.
-   e. Mark task complete on task-board.md
-   f. Commit: Stage the agent's modified files and commit with message:
+   e. Agent finishes — run Post-Dispatch Health Check (see below)
+   f. If health check fails (context overflow, error, crash) — handle per the failure table, re-dispatch if needed
+   g. Verify: did the agent produce what was expected? Cross-check the agent's completion report against `git diff`.
+   h. Mark task complete on task-board.md
+   i. Commit: Stage the agent's modified files and commit with message:
       "[description] (agent-name, TASK-XXX)"
       Example: "Add auth service endpoint (be-dev, TASK-005)"
       - Stage ONLY the files the agent modified (not `git add .`)
       - If parallel agents just completed, commit each agent's files separately in sequence
       - Never commit .hool/operations/ or .hool/memory/ files in the same commit as source code — commit those separately if needed
-   g. Log to cold log
-   h. Check: are there more tasks? -> go to 3a
-   i. Check: did the agent surface issues? -> route them (see Feedback Routing)
+   j. Log to cold log
+   k. Check: are there more tasks? -> go to 3a
+   l. Check: did the agent surface issues? -> route them (see Feedback Routing)
 4. If no pending tasks:
    a. Check phase gate conditions
    b. If gate passes: advance current-phase.md, create tasks for next phase, go to 1
