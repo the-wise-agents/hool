@@ -254,19 +254,29 @@ describe('hool init --team (e2e)', () => {
     await expect(fs.stat(path.join(tmpDir, '.hool/phases/12-retrospective'))).resolves.toBeTruthy();
   }, 30000);
 
-  it('creates browser profile directories for FE projects', async () => {
+  it('copies team phase templates with starter content', async () => {
     await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
 
-    // Browser profiles for QA, FE Dev, Forensic
-    await expect(fs.stat(path.join(tmpDir, '.hool/browser-profiles/qa'))).resolves.toBeTruthy();
-    await expect(fs.stat(path.join(tmpDir, '.hool/browser-profiles/fe-dev'))).resolves.toBeTruthy();
-    await expect(fs.stat(path.join(tmpDir, '.hool/browser-profiles/forensic'))).resolves.toBeTruthy();
+    // Phase templates should have been copied from presets/team/templates/phases/
+    const specTemplate = await fs.readFile(path.join(tmpDir, '.hool/phases/02-spec/spec.md'), 'utf-8');
+    expect(specTemplate.length).toBeGreaterThan(10);
+    expect(specTemplate).toContain('Spec');
+
+    const archTemplate = await fs.readFile(path.join(tmpDir, '.hool/phases/04-architecture/architecture.md'), 'utf-8');
+    expect(archTemplate.length).toBeGreaterThan(10);
+  }, 30000);
+
+  it('creates shared browser profile directory for FE projects', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    // Shared browser profile for headless + headful Playwright
+    await expect(fs.stat(path.join(tmpDir, '.hool/browser-profiles/shared'))).resolves.toBeTruthy();
   }, 30000);
 
   it('skips browser profiles for CLI tool projects', async () => {
     await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'cli-tool', '-m', 'interactive', '--team']);
 
-    await expect(fs.access(path.join(tmpDir, '.hool/browser-profiles'))).rejects.toThrow();
+    await expect(fs.access(path.join(tmpDir, '.hool/browser-profiles/shared'))).rejects.toThrow();
   }, 30000);
 
   it('creates skills directory and copies skill files', async () => {
@@ -327,7 +337,7 @@ describe('hool init --team (e2e)', () => {
     expect(settings.env).toHaveProperty('CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS', '1');
   }, 30000);
 
-  it('configures Playwright MCP in both headless and headful modes', async () => {
+  it('configures Playwright MCP in both headless and headful modes with shared profile', async () => {
     await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
 
     const settings = JSON.parse(await fs.readFile(path.join(tmpDir, '.claude/settings.json'), 'utf-8'));
@@ -335,10 +345,14 @@ describe('hool init --team (e2e)', () => {
     expect(settings).toHaveProperty('mcpServers');
     expect(settings.mcpServers).toHaveProperty('playwright');
     expect(settings.mcpServers).toHaveProperty('playwright-headful');
-    // Headless should have --headless arg
+    // Headless should have --headless arg and shared user-data-dir
     expect(settings.mcpServers.playwright.args).toContain('--headless');
-    // Headful should NOT have --headless arg
+    expect(settings.mcpServers.playwright.args).toContain('--user-data-dir');
+    expect(settings.mcpServers.playwright.args).toContain('.hool/browser-profiles/shared');
+    // Headful should NOT have --headless arg but SHOULD share user-data-dir
     expect(settings.mcpServers['playwright-headful'].args).not.toContain('--headless');
+    expect(settings.mcpServers['playwright-headful'].args).toContain('--user-data-dir');
+    expect(settings.mcpServers['playwright-headful'].args).toContain('.hool/browser-profiles/shared');
   }, 30000);
 
   it('includes Playwright permissions for both modes', async () => {

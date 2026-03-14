@@ -82,13 +82,25 @@ const SKIP_PHASES: Record<ProjectType, string[]> = {
   'other': [],
 };
 
+const TEAM_SKIP_PHASES: Record<ProjectType, string[]> = {
+  'web-app': [],
+  'browser-game': ['.hool/phases/07-implementation'], // BE phases handled by skip in agent prompts
+  'mobile-android': [],
+  'animation': ['.hool/phases/07-implementation'], // BE phases handled by skip in agent prompts
+  'cli-tool': ['.hool/phases/03-design'],
+  'api-only': ['.hool/phases/03-design'],
+  'desktop': [],
+  'other': [],
+};
+
 export async function scaffoldProject(projectDir: string, projectType: ProjectType, mode: ExecutionMode = 'interactive', preset: ProjectPreset = 'solo'): Promise<void> {
   const skip = SKIP_PHASES[projectType] || [];
 
   if (preset === 'team') {
     // Team preset: different phase structure, 11 memory files, skills, browser profiles, logs
+    const teamSkip = TEAM_SKIP_PHASES[projectType] || [];
     for (const dir of TEAM_PHASE_DIRS) {
-      if (skip.some(s => dir.startsWith(s))) continue;
+      if (teamSkip.some(s => dir.startsWith(s))) continue;
       await fs.mkdir(path.join(projectDir, dir), { recursive: true });
     }
 
@@ -122,12 +134,10 @@ export async function scaffoldProject(projectDir: string, projectType: ProjectTy
     await fs.mkdir(path.join(projectDir, '.hool/skills'), { recursive: true });
     await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
 
-    // Browser profiles for Playwright (QA, FE Dev, Forensic)
+    // Browser profile shared between headless and headful Playwright
     const needsFE = !['cli-tool', 'api-only'].includes(projectType);
     if (needsFE) {
-      for (const profile of ['qa', 'fe-dev', 'forensic']) {
-        await fs.mkdir(path.join(projectDir, '.hool/browser-profiles', profile), { recursive: true });
-      }
+      await fs.mkdir(path.join(projectDir, '.hool/browser-profiles/shared'), { recursive: true });
     }
   } else {
     // Solo preset: original structure
@@ -177,34 +187,37 @@ export async function scaffoldProject(projectDir: string, projectType: ProjectTy
 }
 
 export async function scaffoldOnboard(projectDir: string, projectType: ProjectType, mode: ExecutionMode = 'interactive', preset: ProjectPreset = 'solo'): Promise<void> {
-  const skip = SKIP_PHASES[projectType] || [];
-
-  // Create phase directories (same as init — agents populate during onboarding)
-  for (const dir of PHASE_DIRS) {
-    if (skip.some(s => dir.startsWith(s))) continue;
-    await fs.mkdir(path.join(projectDir, dir), { recursive: true });
-  }
-
-  // Project profile marks this as an onboarded project
-  await fs.writeFile(
-    path.join(projectDir, '.hool/phases/00-init/project-profile.md'),
-    `# Project Profile\n\n- **Type**: ${projectType}\n- **Mode**: ${mode}\n- **Origin**: onboarded (existing codebase)\n- **Created**: ${new Date().toISOString().split('T')[0]}\n`,
-    'utf-8',
-  );
-
-  // Create operations directory with onboard-specific templates
-  await fs.mkdir(path.join(projectDir, '.hool/operations'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/operations/context'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/operations/dispatch'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/operations/logs'), { recursive: true });
-  await fs.writeFile(path.join(projectDir, '.hool/operations/logs/.gitignore'), '*.jsonl\n', 'utf-8');
-  const opTemplates = getOnboardOperationTemplates(mode);
-  for (const [filename, content] of Object.entries(opTemplates)) {
-    await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
-  }
-
-  // Create memory directories for each agent (preset-aware)
   if (preset === 'team') {
+    const teamSkip = TEAM_SKIP_PHASES[projectType] || [];
+
+    // Create team phase directories
+    for (const dir of TEAM_PHASE_DIRS) {
+      if (teamSkip.some(s => dir.startsWith(s))) continue;
+      await fs.mkdir(path.join(projectDir, dir), { recursive: true });
+    }
+
+    // Project profile marks this as an onboarded project
+    await fs.writeFile(
+      path.join(projectDir, '.hool/phases/00-init/project-profile.md'),
+      `# Project Profile\n\n- **Type**: ${projectType}\n- **Mode**: ${mode}\n- **Preset**: team\n- **Origin**: onboarded (existing codebase)\n- **Created**: ${new Date().toISOString().split('T')[0]}\n`,
+      'utf-8',
+    );
+
+    // Operations with team-specific templates
+    await fs.mkdir(path.join(projectDir, '.hool/operations'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/operations/context'), { recursive: true });
+    const opTemplates = getTeamOperationTemplates(mode);
+    for (const [filename, content] of Object.entries(opTemplates)) {
+      await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
+    }
+    // Override current-phase to onboarding
+    await fs.writeFile(
+      path.join(projectDir, '.hool/operations/current-phase.md'),
+      getOnboardCurrentPhase(mode),
+      'utf-8',
+    );
+
+    // Memory: 11 files per agent
     const memoryHeaders = getTeamMemoryHeaders();
     for (const agent of TEAM_AGENTS) {
       const agentDir = path.join(projectDir, '.hool/memory', agent);
@@ -213,18 +226,46 @@ export async function scaffoldOnboard(projectDir: string, projectType: ProjectTy
         await fs.writeFile(path.join(agentDir, filename), content, 'utf-8');
       }
     }
+
+    // Team-specific directories
     await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
     await fs.mkdir(path.join(projectDir, '.hool/settings'), { recursive: true });
     await fs.mkdir(path.join(projectDir, '.hool/skills'), { recursive: true });
     await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
 
+    // Browser profiles (shared between headless and headful)
     const needsFE = !['cli-tool', 'api-only'].includes(projectType);
     if (needsFE) {
-      for (const profile of ['qa', 'fe-dev', 'forensic']) {
-        await fs.mkdir(path.join(projectDir, '.hool/browser-profiles', profile), { recursive: true });
-      }
+      await fs.mkdir(path.join(projectDir, '.hool/browser-profiles/shared'), { recursive: true });
     }
   } else {
+    const skip = SKIP_PHASES[projectType] || [];
+
+    // Create solo phase directories
+    for (const dir of PHASE_DIRS) {
+      if (skip.some(s => dir.startsWith(s))) continue;
+      await fs.mkdir(path.join(projectDir, dir), { recursive: true });
+    }
+
+    // Project profile marks this as an onboarded project
+    await fs.writeFile(
+      path.join(projectDir, '.hool/phases/00-init/project-profile.md'),
+      `# Project Profile\n\n- **Type**: ${projectType}\n- **Mode**: ${mode}\n- **Origin**: onboarded (existing codebase)\n- **Created**: ${new Date().toISOString().split('T')[0]}\n`,
+      'utf-8',
+    );
+
+    // Create operations directory with onboard-specific templates
+    await fs.mkdir(path.join(projectDir, '.hool/operations'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/operations/context'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/operations/dispatch'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/operations/logs'), { recursive: true });
+    await fs.writeFile(path.join(projectDir, '.hool/operations/logs/.gitignore'), '*.jsonl\n', 'utf-8');
+    const opTemplates = getOnboardOperationTemplates(mode);
+    for (const [filename, content] of Object.entries(opTemplates)) {
+      await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
+    }
+
+    // Memory: 5 files per agent
     const memoryHeaders = getMemoryHeaders();
     for (const agent of AGENTS) {
       const agentDir = path.join(projectDir, '.hool/memory', agent);
@@ -233,6 +274,7 @@ export async function scaffoldOnboard(projectDir: string, projectType: ProjectTy
         await fs.writeFile(path.join(agentDir, filename), content, 'utf-8');
       }
     }
+
     await fs.mkdir(path.join(projectDir, '.hool/checklists'), { recursive: true });
     await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
     await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
@@ -549,5 +591,83 @@ async function copyDirContents(src: string, dest: string): Promise<void> {
     }
   } catch {
     // Source directory doesn't exist — skip silently
+  }
+}
+
+/**
+ * Copy phase/operations/memory templates from the team preset template directory.
+ * These provide richer starter content than the inline stubs.
+ */
+export async function copyTeamTemplates(projectDir: string, templateRootDir: string): Promise<void> {
+  const templatesDir = path.join(templateRootDir, 'templates');
+
+  // Copy phase templates
+  const phasesDir = path.join(templatesDir, 'phases');
+  try {
+    const phaseDirs = await fs.readdir(phasesDir, { withFileTypes: true });
+    for (const entry of phaseDirs) {
+      if (!entry.isDirectory()) continue;
+      const srcPhaseDir = path.join(phasesDir, entry.name);
+      const destPhaseDir = path.join(projectDir, '.hool/phases', entry.name);
+      await fs.mkdir(destPhaseDir, { recursive: true });
+      await copyDirRecursive(srcPhaseDir, destPhaseDir, true);
+    }
+  } catch { /* templates/phases doesn't exist */ }
+
+  // Copy memory templates (overwrite the inline stubs with richer content)
+  const memoryTemplatesDir = path.join(templatesDir, 'memory');
+  try {
+    const memFiles = await fs.readdir(memoryTemplatesDir);
+    const agents = ['product-lead', 'fe-tech-lead', 'be-tech-lead', 'fe-dev', 'be-dev', 'qa', 'forensic', 'governor'];
+    for (const agent of agents) {
+      const agentMemDir = path.join(projectDir, '.hool/memory', agent);
+      for (const f of memFiles) {
+        if (!f.endsWith('.md')) continue;
+        const src = path.join(memoryTemplatesDir, f);
+        const dest = path.join(agentMemDir, f);
+        // Only copy if the file exists in templates and isn't already richer
+        try {
+          // Only copy if dest doesn't exist (don't overwrite scaffolded content)
+          await fs.access(dest);
+        } catch {
+          // File doesn't exist — copy the template
+          try { await fs.copyFile(src, dest); } catch { /* skip */ }
+        }
+      }
+    }
+  } catch { /* templates/memory doesn't exist */ }
+
+  // Copy operations templates — only if not already written by scaffoldProject
+  const opsTemplatesDir = path.join(templatesDir, 'operations');
+  try {
+    const opsFiles = await fs.readdir(opsTemplatesDir);
+    for (const f of opsFiles) {
+      if (!f.endsWith('.md')) continue;
+      const src = path.join(opsTemplatesDir, f);
+      const dest = path.join(projectDir, '.hool/operations', f);
+      try {
+        // Only copy if dest doesn't exist
+        await fs.access(dest);
+      } catch {
+        try { await fs.copyFile(src, dest); } catch { /* skip */ }
+      }
+    }
+  } catch { /* templates/operations doesn't exist */ }
+}
+
+async function copyDirRecursive(src: string, dest: string, skipExisting = false): Promise<void> {
+  const entries = await fs.readdir(src, { withFileTypes: true });
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      await fs.mkdir(destPath, { recursive: true });
+      await copyDirRecursive(srcPath, destPath, skipExisting);
+    } else {
+      if (skipExisting) {
+        try { await fs.access(destPath); continue; } catch { /* doesn't exist — copy it */ }
+      }
+      await fs.copyFile(srcPath, destPath);
+    }
   }
 }

@@ -6,7 +6,7 @@ import chalk from 'chalk';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
-import { scaffoldProject, scaffoldOnboard, reonboard, writeMcpManifest, writeAgentManifest, copyPlatformFiles } from './core/scaffold.js';
+import { scaffoldProject, scaffoldOnboard, reonboard, writeMcpManifest, writeAgentManifest, copyPlatformFiles, copyTeamTemplates } from './core/scaffold.js';
 import type { ExecutionMode } from './adapters/types.js';
 import { createAdapter } from './adapters/index.js';
 import { checkAndInstallMcps } from './mcps/installer.js';
@@ -137,6 +137,13 @@ program
       console.log(chalk.yellow(`  ⚠ Could not copy platform files (source not found).`));
     }
 
+
+    // 5b. Copy team templates (richer phase/ops/memory content)
+    if (preset === 'team') {
+      await copyTeamTemplates(projectDir, templateRootDir);
+      console.log(chalk.green('  \u2713 Team templates copied (phases, operations, memory)'));
+    }
+
     // 6. Inject platform instructions
     console.log(chalk.dim(`  Configuring for ${platform}...`));
     await adapter.injectInstructions(config);
@@ -191,6 +198,7 @@ program
   .option('-p, --platform <platform>', 'Platform (claude-code, cursor, generic)')
   .option('-t, --type <type>', 'Project type (web-app, browser-game, mobile-android, animation, cli-tool, api-only, desktop, other)')
   .option('-m, --mode <mode>', 'Execution mode (interactive, full-hool)')
+  .option('--team', 'Use team preset (8 agents, Agent Teams)')
   .action(async (opts) => {
     const projectDir = path.resolve(opts.dir);
 
@@ -266,7 +274,7 @@ program
         ],
       });
 
-      const preset: ProjectPreset = 'solo';
+      const preset: ProjectPreset = opts.team ? 'team' : 'solo';
       const adapter = createAdapter(platform);
       const templateRootDir = await getPresetDir(preset);
       const promptsDir = path.join(templateRootDir, 'prompts');
@@ -291,6 +299,13 @@ program
         console.log(chalk.green(`  ✓ Platform files copied for ${platform}`));
       } catch {
         console.log(chalk.yellow(`  ⚠ Could not copy platform files (source not found).`));
+      }
+
+
+      // 5b. Copy team templates (richer phase/ops/memory content)
+      if (preset === 'team') {
+        await copyTeamTemplates(projectDir, templateRootDir);
+        console.log(chalk.green('  \u2713 Team templates copied (phases, operations, memory)'));
       }
 
       // 6. Inject platform instructions
@@ -496,15 +511,22 @@ program
       return;
     }
 
-    // Re-scaffold operations and memory only
-    const { getOperationTemplates, getMemoryHeaders } = await import('./core/templates.js');
-    const opTemplates = getOperationTemplates();
+    // Detect preset from project profile
+    const { getOperationTemplates, getMemoryHeaders, getTeamOperationTemplates, getTeamMemoryHeaders } = await import('./core/templates.js');
+    let isTeam = false;
+    try {
+      const profile = await fs.readFile(path.join(projectDir, '.hool/phases/00-init/project-profile.md'), 'utf-8');
+      isTeam = profile.includes('Preset**: team');
+    } catch { /* no profile */ }
+
+    // Re-scaffold operations and memory only (preset-aware)
+    const opTemplates = isTeam ? getTeamOperationTemplates() : getOperationTemplates();
     for (const [filename, content] of Object.entries(opTemplates)) {
       await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
     }
 
     const agents = ['product-lead', 'fe-tech-lead', 'be-tech-lead', 'fe-dev', 'be-dev', 'qa', 'forensic', 'governor'];
-    const memoryHeaders = getMemoryHeaders();
+    const memoryHeaders = isTeam ? getTeamMemoryHeaders() : getMemoryHeaders();
     for (const agent of agents) {
       const agentDir = path.join(projectDir, '.hool/memory', agent);
       await fs.mkdir(agentDir, { recursive: true });

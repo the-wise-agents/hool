@@ -2,49 +2,143 @@
   "servers": {
     "context7": {
       "command": "npx",
-      "args": ["-y", "@context7/mcp"],
+      "args": [
+        "-y",
+        "@context7/mcp"
+      ],
       "install": "global (npx auto-installs)",
       "description": "Up-to-date library documentation. All agents use this.",
-      "agents": ["all"]
+      "agents": [
+        "all"
+      ]
     },
     "deepwiki": {
       "command": "npx",
-      "args": ["-y", "deepwiki-mcp"],
+      "args": [
+        "-y",
+        "deepwiki-mcp"
+      ],
       "install": "global (npx auto-installs)",
       "description": "Deep documentation for open-source projects.",
-      "agents": ["product-lead", "be-tech-lead", "fe-tech-lead", "be-dev", "fe-dev"]
+      "agents": [
+        "product-lead",
+        "be-tech-lead",
+        "fe-tech-lead",
+        "be-dev",
+        "fe-dev"
+      ]
     },
     "playwright": {
       "package": "@playwright/mcp",
       "command": "playwright-mcp",
-      "args": ["--headless"],
+      "args": [
+        "--headless"
+      ],
       "install": "npm install -g @playwright/mcp (done during hool init)",
-      "description": "Browser automation. Single instance, multiple named profiles.",
-      "agents": ["qa", "forensic", "fe-dev"],
+      "description": "Headless browser automation. Single instance, multiple named profiles. Shares browser profile with playwright-headful.",
+      "agents": [
+        "qa",
+        "forensic",
+        "fe-dev"
+      ],
       "profiles": {
         "description": "Each agent operates in its own named browser profile stored under .hool/browser-profiles/<profile-name>/. Profiles persist cookies, localStorage, and auth state across sessions.",
-        "available": ["qa", "fe-dev", "forensic"],
+        "available": [
+          "qa",
+          "fe-dev",
+          "forensic"
+        ],
         "user-login-required": "Agents cannot log into services that require real credentials (OAuth, 2FA, etc). The user must manually open each profile and log in before agents can test authenticated flows. See the login-nudge hook."
-      }
+      },
+      "shares-profile-with": "playwright-headful"
+    },
+    "playwright-headful": {
+      "command": "playwright-mcp",
+      "args": [],
+      "install": "npm install -g @playwright/mcp (same binary as headless, just no --headless flag)",
+      "description": "Visible browser for human-assisted login, interactive debugging, and live demos. Shares browser profile with headless mode.",
+      "agents": [
+        "qa",
+        "forensic",
+        "fe-dev"
+      ],
+      "shares-profile-with": "playwright"
     }
   },
   "by-domain": {
-    "web-app": ["context7", "deepwiki", "playwright"],
-    "api-only": ["context7", "deepwiki"],
-    "cli-tool": ["context7", "deepwiki"],
-    "browser-game": ["context7", "deepwiki", "playwright"],
-    "animation": ["context7", "deepwiki", "playwright"],
-    "mobile": ["context7", "deepwiki"],
-    "desktop": ["context7", "deepwiki", "playwright"]
+    "web-app": [
+      "context7",
+      "deepwiki",
+      "playwright",
+      "playwright-headful"
+    ],
+    "api-only": [
+      "context7",
+      "deepwiki"
+    ],
+    "cli-tool": [
+      "context7",
+      "deepwiki"
+    ],
+    "browser-game": [
+      "context7",
+      "deepwiki",
+      "playwright",
+      "playwright-headful"
+    ],
+    "animation": [
+      "context7",
+      "deepwiki",
+      "playwright",
+      "playwright-headful"
+    ],
+    "mobile": [
+      "context7",
+      "deepwiki"
+    ],
+    "desktop": [
+      "context7",
+      "deepwiki",
+      "playwright",
+      "playwright-headful"
+    ]
   },
   "agent-access-matrix": {
-    "product-lead":  ["context7", "deepwiki"],
-    "be-tech-lead":  ["context7", "deepwiki"],
-    "fe-tech-lead":  ["context7", "deepwiki"],
-    "be-dev":        ["context7", "deepwiki"],
-    "fe-dev":        ["context7", "deepwiki", "playwright"],
-    "qa":            ["context7", "playwright"],
-    "forensic":      ["context7", "playwright"],
-    "governor":      ["context7"]
+    "product-lead": [
+      "context7",
+      "deepwiki",
+      "playwright-headful"
+    ],
+    "be-tech-lead": [
+      "context7",
+      "deepwiki"
+    ],
+    "fe-tech-lead": [
+      "context7",
+      "deepwiki"
+    ],
+    "be-dev": [
+      "context7",
+      "deepwiki"
+    ],
+    "fe-dev": [
+      "context7",
+      "deepwiki",
+      "playwright",
+      "playwright-headful"
+    ],
+    "qa": [
+      "context7",
+      "playwright",
+      "playwright-headful"
+    ],
+    "forensic": [
+      "context7",
+      "playwright",
+      "playwright-headful"
+    ],
+    "governor": [
+      "context7"
+    ]
   }
 }
