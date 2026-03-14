@@ -613,39 +613,59 @@ program
     }
 
     // Check tmux is available
+    let hasTmux = false;
     try {
       execSync('which tmux', { stdio: 'ignore' });
+      hasTmux = true;
     } catch {
       console.log(chalk.yellow('\n  ⚠ tmux not found. Install it for multi-terminal view:'));
       console.log(chalk.dim('    brew install tmux  (macOS)'));
       console.log(chalk.dim('    apt install tmux   (Linux)\n'));
-      console.log(chalk.dim('  Without tmux, teammates will use in-process mode (Shift+Down to cycle).\n'));
+      console.log(chalk.dim('  Falling back to in-process mode (Shift+Down to cycle teammates).\n'));
     }
 
-    console.log(chalk.bold('\n  HOOL — Starting Product Lead Agent\n'));
-    console.log(chalk.dim('  Agent: product-lead'));
-    console.log(chalk.dim('  Mode: Agent Teams (tmux split-pane)'));
-    console.log(chalk.dim('  Permissions: auto-approved (--dangerously-skip-permissions)'));
-    console.log('');
+    const inTmux = !!process.env.TMUX;
+    const claudeCmd = 'claude --agent product-lead --dangerously-skip-permissions';
 
-    // Launch Claude Code with PL agent identity
-    const args = [
-      'claude',
-      '--agent', 'product-lead',
-      '--dangerously-skip-permissions',
-    ];
+    if (hasTmux && !inTmux) {
+      // Not inside tmux — start a new tmux session with claude inside it
+      console.log(chalk.bold('\n  HOOL — Starting Product Lead Agent in tmux\n'));
+      console.log(chalk.dim('  Agent: product-lead'));
+      console.log(chalk.dim('  Mode: Agent Teams (tmux split-pane)'));
+      console.log(chalk.dim('  Permissions: auto-approved'));
+      console.log(chalk.dim('  Launching tmux session "hool"...'));
+      console.log('');
 
-    try {
-      execSync(args.join(' '), {
-        cwd: projectDir,
-        stdio: 'inherit',
-        env: { ...process.env },
-      });
-    } catch (err: unknown) {
-      // Normal exit from interactive session — not an error
-      const exitCode = (err as { status?: number })?.status;
-      if (exitCode && exitCode !== 0 && exitCode !== 130) {
-        console.log(chalk.red(`\n  Claude Code exited with code ${exitCode}\n`));
+      try {
+        execSync(`tmux new-session -s hool -c ${JSON.stringify(projectDir)} ${JSON.stringify(claudeCmd)}`, {
+          stdio: 'inherit',
+          env: { ...process.env },
+        });
+      } catch (err: unknown) {
+        const exitCode = (err as { status?: number })?.status;
+        if (exitCode && exitCode !== 0 && exitCode !== 130) {
+          console.log(chalk.red(`\n  tmux/Claude Code exited with code ${exitCode}\n`));
+        }
+      }
+    } else {
+      // Already in tmux, or no tmux available — run claude directly
+      console.log(chalk.bold('\n  HOOL — Starting Product Lead Agent\n'));
+      console.log(chalk.dim('  Agent: product-lead'));
+      console.log(chalk.dim(`  Mode: Agent Teams (${inTmux ? 'tmux split-pane' : 'in-process'})`));
+      console.log(chalk.dim('  Permissions: auto-approved'));
+      console.log('');
+
+      try {
+        execSync(claudeCmd, {
+          cwd: projectDir,
+          stdio: 'inherit',
+          env: { ...process.env },
+        });
+      } catch (err: unknown) {
+        const exitCode = (err as { status?: number })?.status;
+        if (exitCode && exitCode !== 0 && exitCode !== 130) {
+          console.log(chalk.red(`\n  Claude Code exited with code ${exitCode}\n`));
+        }
       }
     }
   });
