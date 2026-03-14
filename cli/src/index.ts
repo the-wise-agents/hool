@@ -6,6 +6,7 @@ import chalk from 'chalk';
 import path from 'path';
 import fs from 'fs/promises';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 import { scaffoldProject, scaffoldOnboard, reonboard, writeMcpManifest, writeAgentManifest, copyPlatformFiles, copyTeamTemplates } from './core/scaffold.js';
 import type { ExecutionMode } from './adapters/types.js';
 import { createAdapter } from './adapters/index.js';
@@ -585,6 +586,67 @@ program
       console.log(chalk.dim(`  Updated: project-profile.md, current-phase.md\n`));
     } catch {
       console.log(chalk.red('\n  Not a HOOL project. Run `hool init` first.\n'));
+    }
+  });
+
+
+// ── hool start ────────────────────────────────────────────
+
+program
+  .command('start')
+  .description('Start the Product Lead agent session (team preset only)')
+  .option('-d, --dir <path>', 'Project directory', '.')
+  .action(async (opts) => {
+    const projectDir = path.resolve(opts.dir);
+
+    // Verify this is a HOOL team project
+    try {
+      const profile = await fs.readFile(path.join(projectDir, '.hool/phases/00-init/project-profile.md'), 'utf-8');
+      if (!profile.includes('Preset**: team')) {
+        console.log(chalk.red('\n  Not a team preset project. `hool start` is only for team preset projects.\n'));
+        console.log(chalk.dim('  For solo preset, start Claude Code normally — the orchestrator loads from CLAUDE.md.\n'));
+        return;
+      }
+    } catch {
+      console.log(chalk.red('\n  Not a HOOL project (.hool/ not found). Run `hool init --team` first.\n'));
+      return;
+    }
+
+    // Check tmux is available
+    try {
+      execSync('which tmux', { stdio: 'ignore' });
+    } catch {
+      console.log(chalk.yellow('\n  ⚠ tmux not found. Install it for multi-terminal view:'));
+      console.log(chalk.dim('    brew install tmux  (macOS)'));
+      console.log(chalk.dim('    apt install tmux   (Linux)\n'));
+      console.log(chalk.dim('  Without tmux, teammates will use in-process mode (Shift+Down to cycle).\n'));
+    }
+
+    console.log(chalk.bold('\n  HOOL — Starting Product Lead Agent\n'));
+    console.log(chalk.dim('  Agent: product-lead'));
+    console.log(chalk.dim('  Mode: Agent Teams (tmux split-pane)'));
+    console.log(chalk.dim('  Permissions: auto-approved (--dangerously-skip-permissions)'));
+    console.log('');
+
+    // Launch Claude Code with PL agent identity
+    const args = [
+      'claude',
+      '--agent', 'product-lead',
+      '--dangerously-skip-permissions',
+    ];
+
+    try {
+      execSync(args.join(' '), {
+        cwd: projectDir,
+        stdio: 'inherit',
+        env: { ...process.env },
+      });
+    } catch (err: unknown) {
+      // Normal exit from interactive session — not an error
+      const exitCode = (err as { status?: number })?.status;
+      if (exitCode && exitCode !== 0 && exitCode !== 130) {
+        console.log(chalk.red(`\n  Claude Code exited with code ${exitCode}\n`));
+      }
     }
   });
 

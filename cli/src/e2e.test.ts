@@ -504,3 +504,169 @@ describe('hool init --team (e2e)', () => {
     expect(claudeMd).not.toContain('Agent Teams');
   }, 30000);
 });
+
+describe('hook logic tests', () => {
+  it('metrics.sh increments tool-calls counter', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    // Write initial metrics file
+    const metricsPath = path.join(tmpDir, '.hool/operations/metrics.md');
+    await fs.writeFile(metricsPath, '# Metrics\n\n- tool-calls: 0\n- task-completions: 0\n');
+
+    // Run the hook
+    const hookPath = path.join(tmpDir, '.hool/hooks/metrics.sh');
+    await exec('bash', [hookPath], { cwd: tmpDir });
+
+    // Check counter incremented
+    const content = await fs.readFile(metricsPath, 'utf-8');
+    expect(content).toContain('tool-calls: 1');
+
+    // Run again — should be 2
+    await exec('bash', [hookPath], { cwd: tmpDir });
+    const content2 = await fs.readFile(metricsPath, 'utf-8');
+    expect(content2).toContain('tool-calls: 2');
+  }, 30000);
+
+  it('metrics.sh creates metrics file if missing', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    // Delete the metrics file
+    const metricsPath = path.join(tmpDir, '.hool/operations/metrics.md');
+    try { await fs.unlink(metricsPath); } catch { /* may not exist */ }
+
+    // Run the hook — should create the file
+    const hookPath = path.join(tmpDir, '.hool/hooks/metrics.sh');
+    await exec('bash', [hookPath], { cwd: tmpDir });
+
+    const content = await fs.readFile(metricsPath, 'utf-8');
+    expect(content).toContain('tool-calls: 1');
+    expect(content).toContain('task-completions: 0');
+  }, 30000);
+
+  it('governor-trigger.sh increments task-completions counter', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const metricsPath = path.join(tmpDir, '.hool/operations/metrics.md');
+    await fs.writeFile(metricsPath, '# Metrics\n\n- tool-calls: 0\n- task-completions: 0\n');
+
+    const hookPath = path.join(tmpDir, '.hool/hooks/governor-trigger.sh');
+    await exec('bash', [hookPath], { cwd: tmpDir });
+
+    const content = await fs.readFile(metricsPath, 'utf-8');
+    expect(content).toContain('task-completions: 1');
+  }, 30000);
+
+  it('governor-trigger.sh outputs nudge at threshold (every 5)', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const metricsPath = path.join(tmpDir, '.hool/operations/metrics.md');
+    await fs.writeFile(metricsPath, '# Metrics\n\n- tool-calls: 0\n- task-completions: 4\n');
+
+    const hookPath = path.join(tmpDir, '.hool/hooks/governor-trigger.sh');
+    const { stdout } = await exec('bash', [hookPath], { cwd: tmpDir });
+
+    // At 5 completions, should output governor nudge
+    expect(stdout).toContain('GOVERNOR AUDIT DUE');
+    expect(stdout).toContain('5 tasks completed');
+
+    // Verify counter updated
+    const content = await fs.readFile(metricsPath, 'utf-8');
+    expect(content).toContain('task-completions: 5');
+  }, 30000);
+
+  it('governor-trigger.sh is silent when not at threshold', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const metricsPath = path.join(tmpDir, '.hool/operations/metrics.md');
+    await fs.writeFile(metricsPath, '# Metrics\n\n- tool-calls: 0\n- task-completions: 2\n');
+
+    const hookPath = path.join(tmpDir, '.hool/hooks/governor-trigger.sh');
+    const { stdout } = await exec('bash', [hookPath], { cwd: tmpDir });
+
+    // At 3, should NOT output nudge
+    expect(stdout).not.toContain('GOVERNOR AUDIT DUE');
+  }, 30000);
+
+  it('identity-reminder.sh outputs phase and task context', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const hookPath = path.join(tmpDir, '.hool/hooks/identity-reminder.sh');
+    const { stdout } = await exec('bash', [hookPath], { cwd: tmpDir });
+
+    expect(stdout).toContain('hookSpecificOutput');
+    expect(stdout).toContain('UserPromptSubmit');
+    expect(stdout).toContain('HOOL CONTEXT');
+    expect(stdout).toContain('REMEMBER');
+  }, 30000);
+
+  it('completion-checklist.sh exits 0 when no uncommitted changes', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    // No src/frontend/.git or src/backend/.git — should pass cleanly
+    const hookPath = path.join(tmpDir, '.hool/hooks/completion-checklist.sh');
+    const { stdout } = await exec('bash', [hookPath], { cwd: tmpDir });
+    // No output expected — clean exit
+    expect(stdout.trim()).toBe('');
+  }, 30000);
+
+  it('completion-checklist.sh exits 2 when uncommitted changes exist', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    // Create a git repo in src/frontend/ with uncommitted changes
+    const feDir = path.join(tmpDir, 'src/frontend');
+    await fs.mkdir(feDir, { recursive: true });
+    await exec('git', ['init'], { cwd: feDir });
+    await exec('git', ['config', 'user.email', 'test@test.com'], { cwd: feDir });
+    await exec('git', ['config', 'user.name', 'Test'], { cwd: feDir });
+    await fs.writeFile(path.join(feDir, 'test.txt'), 'hello');
+    await exec('git', ['add', '.'], { cwd: feDir });
+    await exec('git', ['commit', '-m', 'init'], { cwd: feDir });
+    // Now create an uncommitted change
+    await fs.writeFile(path.join(feDir, 'test.txt'), 'changed');
+
+    const hookPath = path.join(tmpDir, '.hool/hooks/completion-checklist.sh');
+    try {
+      await exec('bash', [hookPath], { cwd: tmpDir });
+      // Should not reach here
+      expect(true).toBe(false);
+    } catch (err: unknown) {
+      const error = err as { code?: number; stderr?: string };
+      expect(error.code).toBe(2);
+      expect(error.stderr).toContain('uncommitted');
+    }
+  }, 30000);
+
+  it('login-nudge.sh references shared profile', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const hookPath = path.join(tmpDir, '.hool/hooks/login-nudge.sh');
+    const { stdout } = await exec('bash', [hookPath], { cwd: tmpDir });
+
+    expect(stdout).toContain('browser-profiles/shared');
+    expect(stdout).toContain('--user-data-dir');
+    expect(stdout).not.toContain('browser-profiles/qa');
+    expect(stdout).not.toContain('browser-profiles/fe-dev');
+  }, 30000);
+});
+
+describe('hool start (e2e)', () => {
+  it('rejects start on non-HOOL project', async () => {
+    const { stdout } = await runHool(['start', '-d', tmpDir]);
+    expect(stdout).toContain('Not a HOOL project');
+  }, 30000);
+
+  it('rejects start on solo preset project', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive']);
+    const { stdout } = await runHool(['start', '-d', tmpDir]);
+    expect(stdout).toContain('Not a team preset');
+  }, 30000);
+});
+
+describe('claude-settings.json (team)', () => {
+  it('includes teammateMode for tmux split-pane view', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const settings = JSON.parse(await fs.readFile(path.join(tmpDir, '.claude/settings.json'), 'utf-8'));
+    expect(settings.teammateMode).toBe('tmux');
+  }, 30000);
+});

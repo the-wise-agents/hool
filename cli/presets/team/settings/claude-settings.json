@@ -1,0 +1,90 @@
+{
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "teammateMode": "tmux",
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@context7/mcp"
+      ]
+    },
+    "deepwiki": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "deepwiki-mcp"
+      ]
+    },
+    "playwright": {
+      "command": "playwright-mcp",
+      "args": [
+        "--headless",
+        "--user-data-dir",
+        ".hool/browser-profiles/shared"
+      ],
+      "_note": "Headless mode. Shares browser profile with playwright-headful via --user-data-dir."
+    },
+    "playwright-headful": {
+      "command": "playwright-mcp",
+      "args": [
+        "--user-data-dir",
+        ".hool/browser-profiles/shared"
+      ],
+      "_note": "Headful (visible) mode. Shares browser profile with playwright (headless) via same --user-data-dir."
+    }
+  },
+  "permissions": {
+    "allow": [
+      "Read",
+      "Write",
+      "Edit",
+      "Glob",
+      "Grep",
+      "Bash(git *)",
+      "Bash(ls *)",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(npx *)",
+      "Bash(node *)",
+      "Bash(docker *)",
+      "Bash(docker-compose *)",
+      "Bash(mkdir *)",
+      "mcp__context7__*",
+      "mcp__deepwiki__*",
+      "mcp__playwright__*",
+      "mcp__playwright-headful__*"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "type": "command",
+        "command": "bash .hool/hooks/identity-reminder.sh"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": "bash .hool/hooks/metrics.sh",
+        "description": "Track tool call metrics per agent"
+      }
+    ],
+    "TeammateIdle": [
+      {
+        "type": "command",
+        "command": "bash .hool/hooks/completion-checklist.sh",
+        "description": "Verify agent completed all required steps before going idle"
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "type": "command",
+        "command": "bash .hool/hooks/governor-trigger.sh",
+        "description": "Check if governor audit is due based on task completion count"
+      }
+    ]
+  }
+}
