@@ -197,3 +197,296 @@ describe('hool mode (e2e)', () => {
     expect(stdout).toContain('Invalid mode');
   }, 30000);
 });
+
+describe('hool init --team (e2e)', () => {
+  it('scaffolds a web-app team project with all flags', async () => {
+    const { stdout } = await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+    expect(stdout).toContain('HOOL initialized');
+    expect(stdout).toContain('team');
+
+    // Verify operations files (team has more: metrics, human-feedback, governor-feedback)
+    const ops = await fs.readdir(path.join(tmpDir, '.hool/operations'));
+    expect(ops).toContain('current-phase.md');
+    expect(ops).toContain('task-board.md');
+    expect(ops).toContain('governor-rules.md');
+    expect(ops).toContain('metrics.md');
+    expect(ops).toContain('governor-feedback.md');
+    expect(ops).toContain('human-feedback.md');
+
+    // Team governor rules should mention Agent Teams concepts
+    const govRules = await fs.readFile(path.join(tmpDir, '.hool/operations/governor-rules.md'), 'utf-8');
+    expect(govRules).toContain('teammate');
+    expect(govRules).toContain('logging');
+  }, 30000);
+
+  it('creates 11 memory files per agent (team preset)', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const memAgents = await fs.readdir(path.join(tmpDir, '.hool/memory'));
+    expect(memAgents).toHaveLength(8);
+
+    // Each agent should have 11 memory files
+    for (const agent of memAgents) {
+      const files = await fs.readdir(path.join(tmpDir, '.hool/memory', agent));
+      expect(files).toHaveLength(11);
+      expect(files).toContain('identity.md');
+      expect(files).toContain('skill.md');
+      expect(files).toContain('cold.md');
+      expect(files).toContain('hot.md');
+      expect(files).toContain('issues.md');
+      expect(files).toContain('best-practices.md');
+      expect(files).toContain('governor-feedback.md');
+      expect(files).toContain('client-preferences.md');
+      expect(files).toContain('operational-knowledge.md');
+      expect(files).toContain('picked-tasks.md');
+      expect(files).toContain('task-log.md');
+    }
+  }, 30000);
+
+  it('creates team phase directories (different from solo)', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    // Team has contracts as phase 05 (not fe-scaffold)
+    await expect(fs.stat(path.join(tmpDir, '.hool/phases/05-contracts'))).resolves.toBeTruthy();
+    // Team has separate QA phase dir
+    await expect(fs.stat(path.join(tmpDir, '.hool/phases/09-qa/cases'))).resolves.toBeTruthy();
+    // Team has retrospective phase dir
+    await expect(fs.stat(path.join(tmpDir, '.hool/phases/12-retrospective'))).resolves.toBeTruthy();
+  }, 30000);
+
+  it('creates browser profile directories for FE projects', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    // Browser profiles for QA, FE Dev, Forensic
+    await expect(fs.stat(path.join(tmpDir, '.hool/browser-profiles/qa'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(tmpDir, '.hool/browser-profiles/fe-dev'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(tmpDir, '.hool/browser-profiles/forensic'))).resolves.toBeTruthy();
+  }, 30000);
+
+  it('skips browser profiles for CLI tool projects', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'cli-tool', '-m', 'interactive', '--team']);
+
+    await expect(fs.access(path.join(tmpDir, '.hool/browser-profiles'))).rejects.toThrow();
+  }, 30000);
+
+  it('creates skills directory and copies skill files', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const skillsDir = path.join(tmpDir, '.hool/skills');
+    const skills = await fs.readdir(skillsDir);
+    expect(skills.length).toBeGreaterThan(0);
+    // Verify key skills exist
+    expect(skills).toContain('brainstormer.md');
+    expect(skills).toContain('architect.md');
+    expect(skills).toContain('tdd-implementer.md');
+    expect(skills).toContain('test-engineer.md');
+    expect(skills).toContain('code-reviewer.md');
+  }, 30000);
+
+  it('creates logs directory', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    await expect(fs.stat(path.join(tmpDir, '.hool/logs'))).resolves.toBeTruthy();
+  }, 30000);
+
+  it('copies team agent definitions including product-lead', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const agentsDir = path.join(tmpDir, '.claude/agents');
+    const files = await fs.readdir(agentsDir);
+    expect(files).toContain('product-lead.md');
+    expect(files).toContain('be-dev.md');
+    expect(files).toContain('fe-dev.md');
+    expect(files).toContain('qa.md');
+    expect(files).toContain('forensic.md');
+    expect(files).toContain('governor.md');
+    expect(files).toContain('be-tech-lead.md');
+    expect(files).toContain('fe-tech-lead.md');
+  }, 30000);
+
+  it('injects agent-neutral CLAUDE.md for team preset', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const claudeMd = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
+    // Team CLAUDE.md should be agent-neutral (from claude-md.md)
+    expect(claudeMd).toContain('Agent Teams');
+    expect(claudeMd).toContain('HOOL:START');
+    expect(claudeMd).toContain('HOOL:END');
+    // Should NOT contain solo-specific PL identity
+    expect(claudeMd).not.toContain('dispatched by the Product Lead via CLI');
+    expect(claudeMd).not.toContain('Orchestrator Prompt');
+  }, 30000);
+
+  it('creates .claude/settings.json with Agent Teams env and hooks', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const settings = JSON.parse(await fs.readFile(path.join(tmpDir, '.claude/settings.json'), 'utf-8'));
+    expect(settings).toHaveProperty('hooks');
+    // Team settings should have Agent Teams env var
+    expect(settings).toHaveProperty('env');
+    expect(settings.env).toHaveProperty('CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS', '1');
+  }, 30000);
+
+  it('configures Playwright MCP in both headless and headful modes', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const settings = JSON.parse(await fs.readFile(path.join(tmpDir, '.claude/settings.json'), 'utf-8'));
+    // Should have both playwright entries
+    expect(settings).toHaveProperty('mcpServers');
+    expect(settings.mcpServers).toHaveProperty('playwright');
+    expect(settings.mcpServers).toHaveProperty('playwright-headful');
+    // Headless should have --headless arg
+    expect(settings.mcpServers.playwright.args).toContain('--headless');
+    // Headful should NOT have --headless arg
+    expect(settings.mcpServers['playwright-headful'].args).not.toContain('--headless');
+  }, 30000);
+
+  it('includes Playwright permissions for both modes', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const settings = JSON.parse(await fs.readFile(path.join(tmpDir, '.claude/settings.json'), 'utf-8'));
+    expect(settings.permissions.allow).toContain('mcp__playwright__*');
+    expect(settings.permissions.allow).toContain('mcp__playwright-headful__*');
+  }, 30000);
+
+  it('team hooks include TeammateIdle and TaskCompleted', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const settings = JSON.parse(await fs.readFile(path.join(tmpDir, '.claude/settings.json'), 'utf-8'));
+    expect(settings.hooks).toHaveProperty('TeammateIdle');
+    expect(settings.hooks).toHaveProperty('TaskCompleted');
+    expect(settings.hooks).toHaveProperty('UserPromptSubmit');
+    expect(settings.hooks).toHaveProperty('PostToolUse');
+  }, 30000);
+
+  it('project profile includes preset field for team', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const profile = await fs.readFile(path.join(tmpDir, '.hool/phases/00-init/project-profile.md'), 'utf-8');
+    expect(profile).toContain('team');
+  }, 30000);
+
+  it('team agent prompts include logging requirements', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    // BE Dev prompt should have structured logging
+    const beDev = await fs.readFile(path.join(tmpDir, '.claude/agents/be-dev.md'), 'utf-8');
+    expect(beDev).toContain('correlationId');
+    expect(beDev).toContain('be.log');
+    expect(beDev).toContain('Logs FIRST');
+
+    // FE Dev prompt should have console capture
+    const feDev = await fs.readFile(path.join(tmpDir, '.claude/agents/fe-dev.md'), 'utf-8');
+    expect(feDev).toContain('fe.log');
+    expect(feDev).toContain('dev-mode log server');
+    expect(feDev).toContain('Console interceptor');
+
+    // Forensic prompt should have log analysis
+    const forensic = await fs.readFile(path.join(tmpDir, '.claude/agents/forensic.md'), 'utf-8');
+    expect(forensic).toContain('LOGS FIRST');
+    expect(forensic).toContain('correlationId');
+    expect(forensic).toContain('Log Analysis Techniques');
+  }, 30000);
+
+  it('team agent prompts include Playwright headless and headful modes', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    // QA should have both modes
+    const qa = await fs.readFile(path.join(tmpDir, '.claude/agents/qa.md'), 'utf-8');
+    expect(qa).toContain('mcp__playwright__*');
+    expect(qa).toContain('mcp__playwright-headful__*');
+
+    // Forensic should have both modes
+    const forensic = await fs.readFile(path.join(tmpDir, '.claude/agents/forensic.md'), 'utf-8');
+    expect(forensic).toContain('mcp__playwright__*');
+    expect(forensic).toContain('mcp__playwright-headful__*');
+    expect(forensic).toContain('headful');
+
+    // FE Dev should have both modes
+    const feDev = await fs.readFile(path.join(tmpDir, '.claude/agents/fe-dev.md'), 'utf-8');
+    expect(feDev).toContain('mcp__playwright__*');
+    expect(feDev).toContain('mcp__playwright-headful__*');
+  }, 30000);
+
+  it('CLAUDE.md includes logging architecture section', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const claudeMd = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
+    expect(claudeMd).toContain('Logging Architecture');
+    expect(claudeMd).toContain('be.log');
+    expect(claudeMd).toContain('fe.log');
+    expect(claudeMd).toContain('Debugging Protocol');
+    expect(claudeMd).toContain('correlationId');
+  }, 30000);
+
+  it('CLAUDE.md includes Playwright modes section', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const claudeMd = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
+    expect(claudeMd).toContain('Headless vs Headful');
+    expect(claudeMd).toContain('playwright-headful');
+    expect(claudeMd).toContain('human-assisted login');
+  }, 30000);
+
+  it('BE Tech Lead prompt includes logging scaffold instructions', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const beLead = await fs.readFile(path.join(tmpDir, '.claude/agents/be-tech-lead.md'), 'utf-8');
+    expect(beLead).toContain('CRITICAL for debugging visibility');
+    expect(beLead).toContain('correlationId');
+    expect(beLead).toContain('pino');
+    expect(beLead).toContain('JSONL');
+    expect(beLead).toContain('be.log');
+  }, 30000);
+
+  it('FE Tech Lead prompt includes FE logging scaffold instructions', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const feLead = await fs.readFile(path.join(tmpDir, '.claude/agents/fe-tech-lead.md'), 'utf-8');
+    expect(feLead).toContain('CRITICAL for debugging visibility');
+    expect(feLead).toContain('dev-mode log server');
+    expect(feLead).toContain('Console intercept');
+    expect(feLead).toContain('fe.log');
+    expect(feLead).toContain('window.onerror');
+  }, 30000);
+
+  it('QA prompt includes log verification in test execution', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    const qa = await fs.readFile(path.join(tmpDir, '.claude/agents/qa.md'), 'utf-8');
+    expect(qa).toContain('test.log');
+    expect(qa).toContain('Log verification');
+    expect(qa).toContain('silent errors');
+  }, 30000);
+
+  it('does not create solo-specific directories for team preset', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive', '--team']);
+
+    // Team should NOT have solo-specific dispatch/logs dirs in operations
+    await expect(fs.access(path.join(tmpDir, '.hool/operations/dispatch'))).rejects.toThrow();
+    await expect(fs.access(path.join(tmpDir, '.hool/operations/logs'))).rejects.toThrow();
+    // Team SHOULD have skills dir (solo doesn't)
+    await expect(fs.stat(path.join(tmpDir, '.hool/skills'))).resolves.toBeTruthy();
+  }, 30000);
+
+  it('solo preset still works correctly (regression)', async () => {
+    await runHool(['init', '-d', tmpDir, '-p', 'claude-code', '-t', 'web-app', '-m', 'interactive']);
+
+    // Solo should have 5 memory files per agent
+    const memFiles = await fs.readdir(path.join(tmpDir, '.hool/memory/be-dev'));
+    expect(memFiles).toHaveLength(5);
+    expect(memFiles).toContain('hot.md');
+    expect(memFiles).toContain('cold.md');
+    expect(memFiles).toContain('best-practices.md');
+    expect(memFiles).toContain('issues.md');
+    expect(memFiles).toContain('governor-feedback.md');
+    // Solo should NOT have team-specific memory files
+    expect(memFiles).not.toContain('identity.md');
+    expect(memFiles).not.toContain('picked-tasks.md');
+
+    // Solo CLAUDE.md should have orchestrator content
+    const claudeMd = await fs.readFile(path.join(tmpDir, 'CLAUDE.md'), 'utf-8');
+    expect(claudeMd).toContain('Orchestrator Prompt');
+    expect(claudeMd).not.toContain('Agent Teams');
+  }, 30000);
+});

@@ -87,6 +87,7 @@ describe('checkAndInstallMcps', () => {
     projectDir: '/tmp/test',
     promptsDir: '/tmp/test/prompts',
     mode: 'interactive',
+    preset: 'solo',
   };
 
   it('returns already-installed for pre-installed MCPs', async () => {

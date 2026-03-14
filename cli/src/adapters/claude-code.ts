@@ -105,19 +105,32 @@ export class ClaudeCodeAdapter implements Adapter {
 
   async injectInstructions(config: AdapterConfig): Promise<void> {
     const claudeMdPath = path.join(config.projectDir, 'CLAUDE.md');
-    let orchestratorContent = '';
-    try {
-      orchestratorContent = await fs.readFile(path.join(config.promptsDir, 'orchestrator.md'), 'utf-8');
-    } catch {
-      // Fallback: legacy .hool/prompts/ location
-      try {
-        orchestratorContent = await fs.readFile(path.join(config.projectDir, '.hool', 'prompts', 'orchestrator.md'), 'utf-8');
-      } catch {
-        orchestratorContent = '<!-- orchestrator.md not found — run hool init to generate -->';
-      }
-    }
 
-    const content = generateClaudeMd(config, orchestratorContent);
+    // Team preset: use claude-md.md (agent-neutral shared context)
+    // Solo preset: use orchestrator.md (PL-specific, embedded in CLAUDE.md)
+    let content: string;
+    if (config.preset === 'team') {
+      let claudeMdContent = '';
+      try {
+        claudeMdContent = await fs.readFile(path.join(config.promptsDir, 'claude-md.md'), 'utf-8');
+      } catch {
+        claudeMdContent = '<!-- claude-md.md not found — run hool init to generate -->';
+      }
+      content = `${getHoolStartMarker(HOOL_VERSION)}\n${claudeMdContent}\n${HOOL_END_MARKER}\n`;
+    } else {
+      let orchestratorContent = '';
+      try {
+        orchestratorContent = await fs.readFile(path.join(config.promptsDir, 'orchestrator.md'), 'utf-8');
+      } catch {
+        // Fallback: legacy .hool/prompts/ location
+        try {
+          orchestratorContent = await fs.readFile(path.join(config.projectDir, '.hool', 'prompts', 'orchestrator.md'), 'utf-8');
+        } catch {
+          orchestratorContent = '<!-- orchestrator.md not found — run hool init to generate -->';
+        }
+      }
+      content = generateClaudeMd(config, orchestratorContent);
+    }
 
     // Replace between markers, prepend, or create new
     try {

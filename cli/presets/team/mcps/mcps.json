@@ -1,0 +1,50 @@
+{
+  "servers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@context7/mcp"],
+      "install": "global (npx auto-installs)",
+      "description": "Up-to-date library documentation. All agents use this.",
+      "agents": ["all"]
+    },
+    "deepwiki": {
+      "command": "npx",
+      "args": ["-y", "deepwiki-mcp"],
+      "install": "global (npx auto-installs)",
+      "description": "Deep documentation for open-source projects.",
+      "agents": ["product-lead", "be-tech-lead", "fe-tech-lead", "be-dev", "fe-dev"]
+    },
+    "playwright": {
+      "package": "@playwright/mcp",
+      "command": "playwright-mcp",
+      "args": ["--headless"],
+      "install": "npm install -g @playwright/mcp (done during hool init)",
+      "description": "Browser automation. Single instance, multiple named profiles.",
+      "agents": ["qa", "forensic", "fe-dev"],
+      "profiles": {
+        "description": "Each agent operates in its own named browser profile stored under .hool/browser-profiles/<profile-name>/. Profiles persist cookies, localStorage, and auth state across sessions.",
+        "available": ["qa", "fe-dev", "forensic"],
+        "user-login-required": "Agents cannot log into services that require real credentials (OAuth, 2FA, etc). The user must manually open each profile and log in before agents can test authenticated flows. See the login-nudge hook."
+      }
+    }
+  },
+  "by-domain": {
+    "web-app": ["context7", "deepwiki", "playwright"],
+    "api-only": ["context7", "deepwiki"],
+    "cli-tool": ["context7", "deepwiki"],
+    "browser-game": ["context7", "deepwiki", "playwright"],
+    "animation": ["context7", "deepwiki", "playwright"],
+    "mobile": ["context7", "deepwiki"],
+    "desktop": ["context7", "deepwiki", "playwright"]
+  },
+  "agent-access-matrix": {
+    "product-lead":  ["context7", "deepwiki"],
+    "be-tech-lead":  ["context7", "deepwiki"],
+    "fe-tech-lead":  ["context7", "deepwiki"],
+    "be-dev":        ["context7", "deepwiki"],
+    "fe-dev":        ["context7", "deepwiki", "playwright"],
+    "qa":            ["context7", "playwright"],
+    "forensic":      ["context7", "playwright"],
+    "governor":      ["context7"]
+  }
+}

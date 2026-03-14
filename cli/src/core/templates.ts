@@ -133,3 +133,57 @@ export function getMemoryHeaders(): Record<string, string> {
     'governor-feedback.md': `# Governor Feedback\n\n_No feedback yet._\n`,
   };
 }
+
+export function getTeamMemoryHeaders(): Record<string, string> {
+  return {
+    'identity.md': `# Identity\n\n_Not yet defined for this project._\n`,
+
+    'skill.md': `# Skill Pointers\n\n_No skill adaptations yet._\n`,
+
+    'cold.md': `# Cold Log\n\n`,
+
+    'hot.md': `## Compact\n_No history yet._\n\n## Summary\n_No history yet._\n\n## Recent\n_No history yet._\n`,
+
+    'issues.md': `# Personal Issues Log\n\n_No issues logged yet._\n`,
+
+    'best-practices.md': `# Best Practices\n\n_No patterns or gotchas logged yet._\n`,
+
+    'governor-feedback.md': `# Governor Feedback\n\n_No feedback yet._\n`,
+
+    'client-preferences.md': `# Client Preferences (Agent-Specific)\n\n_PL will distill global preferences here._\n`,
+
+    'operational-knowledge.md': `# Operational Knowledge\n\n_No deployment/infra details yet._\n`,
+
+    'picked-tasks.md': `# Picked Tasks\n\n_No tasks assigned yet._\n`,
+
+    'task-log.md': `# Task Log\n\n_No tasks completed yet._\n`,
+  };
+}
+
+export function getTeamOperationTemplates(mode: string = 'interactive'): Record<string, string> {
+  return {
+    'current-phase.md': `# Current Phase\n\n- **Mode**: ${mode}\n- **Phase**: 0 (Project Init)\n\nAwaiting start.\n`,
+
+    'task-board.md': `# Task Board\n\n## Active Tasks\n_No tasks yet._\n\n## Completed Tasks\n_None._\n`,
+
+    'bugs.md': `# Bug Tracker\n\n_No bugs reported yet._\n`,
+
+    'issues.md': `# Issues\n\n_No issues logged yet._\n`,
+
+    'inconsistencies.md': `# Inconsistencies\n\n_No inconsistencies found yet._\n`,
+
+    'needs-human-review.md': `# Needs Human Review\n\n_Nothing pending human review._\n`,
+
+    'client-preferences.md': `# Client Preferences\n\nUser tech and product preferences captured during the project. Every agent honours these.\n\n## Tech Preferences\n_None yet._\n\n## Product Constraints\n_None yet._\n\n## Integrations\n_None yet._\n`,
+
+    'governor-rules.md': `# Governor Rules\n\nHard rules enforced by the Governor agent. Agents self-enforce; Governor audits.\n\n## Critical (must never happen even once)\n- [CRITICAL] No agent may modify its own prompt files (.claude/agents/)\n- [CRITICAL] Product Lead must NEVER edit application code (src/) directly — message the assigned teammate\n- [CRITICAL] No agent may remove or overwrite entries in governor-rules.md\n- [CRITICAL] Never spawn multiple instances of the same teammate — each role exists exactly once\n\n## High\n- [HIGH] All agents must load their client-preferences.md and honour user preferences\n- [HIGH] No task is too small for teammate dispatch — even one-line changes go through the assigned agent\n- [HIGH] Dev agents (FE Dev, BE Dev) MUST run actual test commands and include terminal output showing pass/fail counts\n- [HIGH] All code must include structured logging (see Logging Architecture in CLAUDE.md)\n- [HIGH] Agents must check .hool/logs/ (be.log, fe.log) BEFORE reading source code when debugging\n\n## Medium\n- [MEDIUM] Agents must review best-practices.md and governor-feedback.md before submitting work\n- [MEDIUM] All file edits must be within the agent's declared writable paths\n- [MEDIUM] Agents must update memory files before going idle\n`,
+
+    'governor-log.md': `# Governor Log\n\n_No audits yet._\n`,
+
+    'metrics.md': `# Metrics\n- tool-calls: 0\n- task-completions: 0\n`,
+
+    'human-feedback.md': `# Human Feedback\n\n_No human feedback captured yet._\n`,
+
+    'governor-feedback.md': `# Governor Feedback (Global)\n\n_No global patterns yet._\n`,
+  };
+}

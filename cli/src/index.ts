@@ -11,7 +11,7 @@ import type { ExecutionMode } from './adapters/types.js';
 import { createAdapter } from './adapters/index.js';
 import { checkAndInstallMcps } from './mcps/installer.js';
 import { getRequiredMcpNames } from './mcps/registry.js';
-import type { ProjectType, AgentPlatform, AdapterConfig } from './adapters/types.js';
+import type { ProjectType, AgentPlatform, AdapterConfig, ProjectPreset } from './adapters/types.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -23,28 +23,26 @@ const { version: PKG_VERSION } = require('../package.json');
 // Template root: check monorepo dev paths first (hool-mini has agents/hooks/settings),
 // then bundled (npm install where prepublishOnly copies them alongside dist/).
 // Returns the directory that contains prompts/, agents/, hooks/, settings/
-async function getTemplateRootDir(): Promise<string> {
+async function getPresetDir(preset: ProjectPreset): Promise<string> {
   const candidates = [
-    path.resolve(__dirname, '..', '..', 'hool-mini'),  // dev: cli/src/ -> hool/hool-mini/
-    path.resolve(__dirname, '..', '..', '..', 'hool-mini'),  // dev: cli/dist/ -> hool/hool-mini/
-    path.resolve(__dirname, '..'),  // npm: cli/dist/ -> cli/ (bundled prompts/agents/hooks/settings alongside dist/)
+    path.resolve(__dirname, '..', 'presets', preset),      // dev: cli/src/ -> cli/presets/<preset>/
+    path.resolve(__dirname, '..', '..', 'presets', preset), // dev: cli/dist/ -> cli/presets/<preset>/
+    path.resolve(__dirname, '..', 'presets', preset),       // npm: cli/dist/ -> cli/presets/<preset>/
   ];
   for (const dir of candidates) {
     try {
-      // Check for prompts/ AND agents/ to ensure it's a complete template root
       await fs.access(path.join(dir, 'prompts'));
       await fs.access(path.join(dir, 'agents'));
       return dir;
     } catch { /* not found, try next */ }
   }
-  // Fallback: just check prompts/ (handles incomplete bundles)
   for (const dir of candidates) {
     try {
       await fs.access(path.join(dir, 'prompts'));
       return dir;
     } catch { /* not found, try next */ }
   }
-  return candidates[0]; // last resort
+  return candidates[0];
 }
 
 
@@ -64,10 +62,20 @@ program
   .option('-p, --platform <platform>', 'Platform (claude-code, cursor, generic)')
   .option('-t, --type <type>', 'Project type (web-app, browser-game, mobile-android, animation, cli-tool, api-only, desktop, other)')
   .option('-m, --mode <mode>', 'Execution mode (interactive, full-hool)')
+  .option('--team', 'Use team preset (8 agents, Agent Teams)')
   .action(async (opts) => {
     const projectDir = path.resolve(opts.dir);
 
     console.log(chalk.bold('\n  HOOL — Agent-Driven SDLC\n'));
+
+    // 0. Determine preset (solo or team)
+    const preset: ProjectPreset = opts.team ? 'team' : (opts.platform && opts.type && opts.mode) ? 'solo' : await select<ProjectPreset>({
+      message: 'Project mode?',
+      choices: [
+        { name: 'Solo — one agent, you talk to it directly', value: 'solo' },
+        { name: 'Team — 8 agents, Product Lead coordinates (Agent Teams)', value: 'team' },
+      ],
+    });
 
     // 1. Ask platform (or use flag)
     const platform: AgentPlatform = opts.platform || await select<AgentPlatform>({
@@ -104,7 +112,7 @@ program
     });
 
     const adapter = createAdapter(platform);
-    const templateRootDir = await getTemplateRootDir();
+    const templateRootDir = await getPresetDir(preset);
     const promptsDir = path.join(templateRootDir, 'prompts');
     const config: AdapterConfig = {
       platform,
@@ -112,17 +120,18 @@ program
       projectDir,
       promptsDir,
       mode,
+      preset,
     };
 
     // 4. Scaffold project structure
     console.log(chalk.dim('\n  Scaffolding project structure...'));
-    await scaffoldProject(projectDir, projectType, mode);
+    await scaffoldProject(projectDir, projectType, mode, preset);
     console.log(chalk.green('  ✓ Project structure created'));
 
     // 5. Copy platform-specific files (agents, hooks, skills, checklists, settings)
     console.log(chalk.dim('  Copying platform files (agents, hooks, skills, checklists, settings)...'));
     try {
-      await copyPlatformFiles(projectDir, templateRootDir, platform);
+      await copyPlatformFiles(projectDir, templateRootDir, platform, preset);
       console.log(chalk.green(`  ✓ Platform files copied for ${platform}`));
     } catch {
       console.log(chalk.yellow(`  ⚠ Could not copy platform files (source not found).`));
@@ -165,6 +174,7 @@ program
 
     // 9. Done
     console.log(chalk.bold.green(`\n  HOOL initialized for: ${projectType}`));
+    console.log(chalk.dim(`  Preset: ${preset}`));
     console.log(chalk.dim(`  Platform: ${platform}`));
     console.log(chalk.dim(`  Mode: ${mode}`));
     console.log(chalk.dim(`  MCPs: ${requiredMcps.join(', ')}`));
@@ -256,8 +266,9 @@ program
         ],
       });
 
+      const preset: ProjectPreset = 'solo';
       const adapter = createAdapter(platform);
-      const templateRootDir = await getTemplateRootDir();
+      const templateRootDir = await getPresetDir(preset);
       const promptsDir = path.join(templateRootDir, 'prompts');
       const config: AdapterConfig = {
         platform,
@@ -265,11 +276,12 @@ program
         projectDir,
         promptsDir,
         mode,
+        preset,
       };
 
       // 4. Scaffold HOOL structure around existing code
       console.log(chalk.dim('\n  Scaffolding HOOL around existing project...'));
-      await scaffoldOnboard(projectDir, projectType, mode);
+      await scaffoldOnboard(projectDir, projectType, mode, preset);
       console.log(chalk.green('  ✓ HOOL structure created (existing code untouched)'));
 
       // 5. Copy platform-specific files (agents, hooks, skills, checklists, settings)

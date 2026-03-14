@@ -10,12 +10,15 @@ export interface McpDefinition {
 
 export type ExecutionMode = 'interactive' | 'full-hool';
 
+export type ProjectPreset = 'solo' | 'team';
+
 export interface AdapterConfig {
   platform: AgentPlatform;
   projectType: ProjectType;
   projectDir: string;
   promptsDir: string;
   mode: ExecutionMode;
+  preset: ProjectPreset;
 }
 
 export interface Adapter {

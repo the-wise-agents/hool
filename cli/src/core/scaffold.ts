@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
-import type { ProjectType, ExecutionMode, AgentPlatform } from '../adapters/types.js';
-import { getOperationTemplates, getOnboardOperationTemplates, getOnboardCurrentPhase, getOnboardTasksPrepend, getMemoryHeaders } from './templates.js';
+import type { ProjectType, ExecutionMode, AgentPlatform, ProjectPreset } from '../adapters/types.js';
+import { getOperationTemplates, getOnboardOperationTemplates, getOnboardCurrentPhase, getOnboardTasksPrepend, getMemoryHeaders, getTeamMemoryHeaders, getTeamOperationTemplates } from './templates.js';
 import { MCP_REGISTRY } from '../mcps/registry.js';
 
 const AGENTS = [
@@ -40,6 +40,37 @@ const PHASE_DIRS = [
   '.hool/phases/07-test-plan/cases',
 ];
 
+const TEAM_AGENTS = [
+  'product-lead',
+  'fe-tech-lead',
+  'be-tech-lead',
+  'fe-dev',
+  'be-dev',
+  'qa',
+  'forensic',
+  'governor',
+] as const;
+
+const TEAM_PHASE_DIRS = [
+  '.hool/phases/00-init',
+  '.hool/phases/01-brainstorm',
+  '.hool/phases/02-spec/features',
+  '.hool/phases/03-design/cards',
+  '.hool/phases/03-design/flows',
+  '.hool/phases/04-architecture/contracts',
+  '.hool/phases/04-architecture/flows',
+  '.hool/phases/04-architecture/fe',
+  '.hool/phases/04-architecture/be',
+  '.hool/phases/05-contracts',
+  '.hool/phases/06-tasks',
+  '.hool/phases/07-implementation',
+  '.hool/phases/08-review',
+  '.hool/phases/09-qa/cases',
+  '.hool/phases/10-forensic',
+  '.hool/phases/11-ship',
+  '.hool/phases/12-retrospective',
+];
+
 const SKIP_PHASES: Record<ProjectType, string[]> = {
   'web-app': [],
   'browser-game': ['.hool/phases/06-be-scaffold'],
@@ -51,56 +82,101 @@ const SKIP_PHASES: Record<ProjectType, string[]> = {
   'other': [],
 };
 
-export async function scaffoldProject(projectDir: string, projectType: ProjectType, mode: ExecutionMode = 'interactive'): Promise<void> {
+export async function scaffoldProject(projectDir: string, projectType: ProjectType, mode: ExecutionMode = 'interactive', preset: ProjectPreset = 'solo'): Promise<void> {
   const skip = SKIP_PHASES[projectType] || [];
 
-  // Create phase directories (empty — agents create the docs during their phases)
-  for (const dir of PHASE_DIRS) {
-    if (skip.some(s => dir.startsWith(s))) continue;
-    await fs.mkdir(path.join(projectDir, dir), { recursive: true });
-  }
-
-  // Only create project-profile.md — the one doc that init itself produces
-  await fs.writeFile(
-    path.join(projectDir, '.hool/phases/00-init/project-profile.md'),
-    `# Project Profile\n\n- **Type**: ${projectType}\n- **Mode**: ${mode}\n- **Created**: ${new Date().toISOString().split('T')[0]}\n`,
-    'utf-8',
-  );
-
-  // Create operations directory with templates
-  await fs.mkdir(path.join(projectDir, '.hool/operations'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/operations/context'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/operations/dispatch'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/operations/logs'), { recursive: true });
-  await fs.writeFile(path.join(projectDir, '.hool/operations/logs/.gitignore'), '*.jsonl\n', 'utf-8');
-  const opTemplates = getOperationTemplates(mode);
-  for (const [filename, content] of Object.entries(opTemplates)) {
-    await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
-  }
-
-  // Create memory directories for each agent
-  const memoryHeaders = getMemoryHeaders();
-  for (const agent of AGENTS) {
-    const agentDir = path.join(projectDir, '.hool/memory', agent);
-    await fs.mkdir(agentDir, { recursive: true });
-    for (const [filename, content] of Object.entries(memoryHeaders)) {
-      await fs.writeFile(path.join(agentDir, filename), content, 'utf-8');
+  if (preset === 'team') {
+    // Team preset: different phase structure, 11 memory files, skills, browser profiles, logs
+    for (const dir of TEAM_PHASE_DIRS) {
+      if (skip.some(s => dir.startsWith(s))) continue;
+      await fs.mkdir(path.join(projectDir, dir), { recursive: true });
     }
-  }
 
-  // Create .hool directories
-  await fs.mkdir(path.join(projectDir, '.hool/checklists'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/metrics'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/settings'), { recursive: true });
+    await fs.writeFile(
+      path.join(projectDir, '.hool/phases/00-init/project-profile.md'),
+      `# Project Profile\n\n- **Type**: ${projectType}\n- **Mode**: ${mode}\n- **Preset**: team\n- **Created**: ${new Date().toISOString().split('T')[0]}\n`,
+      'utf-8',
+    );
+
+    // Operations with team-specific templates
+    await fs.mkdir(path.join(projectDir, '.hool/operations'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/operations/context'), { recursive: true });
+    const opTemplates = getTeamOperationTemplates(mode);
+    for (const [filename, content] of Object.entries(opTemplates)) {
+      await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
+    }
+
+    // Memory: 11 files per agent
+    const memoryHeaders = getTeamMemoryHeaders();
+    for (const agent of TEAM_AGENTS) {
+      const agentDir = path.join(projectDir, '.hool/memory', agent);
+      await fs.mkdir(agentDir, { recursive: true });
+      for (const [filename, content] of Object.entries(memoryHeaders)) {
+        await fs.writeFile(path.join(agentDir, filename), content, 'utf-8');
+      }
+    }
+
+    // Team-specific directories
+    await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/settings'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/skills'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
+
+    // Browser profiles for Playwright (QA, FE Dev, Forensic)
+    const needsFE = !['cli-tool', 'api-only'].includes(projectType);
+    if (needsFE) {
+      for (const profile of ['qa', 'fe-dev', 'forensic']) {
+        await fs.mkdir(path.join(projectDir, '.hool/browser-profiles', profile), { recursive: true });
+      }
+    }
+  } else {
+    // Solo preset: original structure
+    for (const dir of PHASE_DIRS) {
+      if (skip.some(s => dir.startsWith(s))) continue;
+      await fs.mkdir(path.join(projectDir, dir), { recursive: true });
+    }
+
+    await fs.writeFile(
+      path.join(projectDir, '.hool/phases/00-init/project-profile.md'),
+      `# Project Profile\n\n- **Type**: ${projectType}\n- **Mode**: ${mode}\n- **Created**: ${new Date().toISOString().split('T')[0]}\n`,
+      'utf-8',
+    );
+
+    // Operations with solo templates
+    await fs.mkdir(path.join(projectDir, '.hool/operations'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/operations/context'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/operations/dispatch'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/operations/logs'), { recursive: true });
+    await fs.writeFile(path.join(projectDir, '.hool/operations/logs/.gitignore'), '*.jsonl\n', 'utf-8');
+    const opTemplates = getOperationTemplates(mode);
+    for (const [filename, content] of Object.entries(opTemplates)) {
+      await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
+    }
+
+    // Memory: 5 files per agent
+    const memoryHeaders = getMemoryHeaders();
+    for (const agent of AGENTS) {
+      const agentDir = path.join(projectDir, '.hool/memory', agent);
+      await fs.mkdir(agentDir, { recursive: true });
+      for (const [filename, content] of Object.entries(memoryHeaders)) {
+        await fs.writeFile(path.join(agentDir, filename), content, 'utf-8');
+      }
+    }
+
+    // Solo-specific directories
+    await fs.mkdir(path.join(projectDir, '.hool/checklists'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/metrics'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/settings'), { recursive: true });
+  }
 
   // NOTE: src/, tests/ are NOT created here.
   // Those are project concerns decided during architecture (Phase 4)
   // and scaffolded by Tech Leads during Phases 5-6 (LLD).
 }
 
-export async function scaffoldOnboard(projectDir: string, projectType: ProjectType, mode: ExecutionMode = 'interactive'): Promise<void> {
+export async function scaffoldOnboard(projectDir: string, projectType: ProjectType, mode: ExecutionMode = 'interactive', preset: ProjectPreset = 'solo'): Promise<void> {
   const skip = SKIP_PHASES[projectType] || [];
 
   // Create phase directories (same as init — agents populate during onboarding)
@@ -127,22 +203,42 @@ export async function scaffoldOnboard(projectDir: string, projectType: ProjectTy
     await fs.writeFile(path.join(projectDir, '.hool/operations', filename), content, 'utf-8');
   }
 
-  // Create memory directories for each agent
-  const memoryHeaders = getMemoryHeaders();
-  for (const agent of AGENTS) {
-    const agentDir = path.join(projectDir, '.hool/memory', agent);
-    await fs.mkdir(agentDir, { recursive: true });
-    for (const [filename, content] of Object.entries(memoryHeaders)) {
-      await fs.writeFile(path.join(agentDir, filename), content, 'utf-8');
+  // Create memory directories for each agent (preset-aware)
+  if (preset === 'team') {
+    const memoryHeaders = getTeamMemoryHeaders();
+    for (const agent of TEAM_AGENTS) {
+      const agentDir = path.join(projectDir, '.hool/memory', agent);
+      await fs.mkdir(agentDir, { recursive: true });
+      for (const [filename, content] of Object.entries(memoryHeaders)) {
+        await fs.writeFile(path.join(agentDir, filename), content, 'utf-8');
+      }
     }
-  }
+    await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/settings'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/skills'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
 
-  // Create .hool directories
-  await fs.mkdir(path.join(projectDir, '.hool/checklists'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/metrics'), { recursive: true });
-  await fs.mkdir(path.join(projectDir, '.hool/settings'), { recursive: true });
+    const needsFE = !['cli-tool', 'api-only'].includes(projectType);
+    if (needsFE) {
+      for (const profile of ['qa', 'fe-dev', 'forensic']) {
+        await fs.mkdir(path.join(projectDir, '.hool/browser-profiles', profile), { recursive: true });
+      }
+    }
+  } else {
+    const memoryHeaders = getMemoryHeaders();
+    for (const agent of AGENTS) {
+      const agentDir = path.join(projectDir, '.hool/memory', agent);
+      await fs.mkdir(agentDir, { recursive: true });
+      for (const [filename, content] of Object.entries(memoryHeaders)) {
+        await fs.writeFile(path.join(agentDir, filename), content, 'utf-8');
+      }
+    }
+    await fs.mkdir(path.join(projectDir, '.hool/checklists'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/hooks'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/logs'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/metrics'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, '.hool/settings'), { recursive: true });
+  }
 }
 
 export async function reonboard(projectDir: string, mode: ExecutionMode = 'interactive'): Promise<void> {
@@ -310,9 +406,23 @@ export async function writeAgentManifest(projectDir: string): Promise<void> {
  * Copy platform-specific agent definitions, hooks, and settings.
  * Source files come from hool-mini templates (bundled with CLI).
  */
-export async function copyPlatformFiles(projectDir: string, templateRootDir: string, platform: AgentPlatform): Promise<void> {
-  // templateRootDir points to hool-mini/ (or cli/ when bundled) — contains agents/, hooks/, settings/
+export async function copyPlatformFiles(projectDir: string, templateRootDir: string, platform: AgentPlatform, preset: ProjectPreset = 'solo'): Promise<void> {
+  // templateRootDir points to presets/<preset>/ — contains agents/, hooks/, settings/
   const hoolMiniDir = templateRootDir;
+
+  // Team preset: copy skills to .hool/skills/
+  if (preset === 'team') {
+    const skillsSrc = path.join(hoolMiniDir, 'skills');
+    const skillsDest = path.join(projectDir, '.hool/skills');
+    await fs.mkdir(skillsDest, { recursive: true });
+    try {
+      const entries = await fs.readdir(skillsSrc);
+      for (const entry of entries) {
+        if (!entry.endsWith('.md')) continue;
+        await fs.copyFile(path.join(skillsSrc, entry), path.join(skillsDest, entry));
+      }
+    } catch { /* skills dir doesn't exist */ }
+  }
 
   if (platform === 'claude-code') {
     // Copy .claude/agents/*.md

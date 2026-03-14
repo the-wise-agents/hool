@@ -25,6 +25,7 @@ function makeConfig(overrides: Partial<AdapterConfig> = {}): AdapterConfig {
     projectDir: tmpDir,
     promptsDir: path.join(tmpDir, 'prompts'),
     mode: 'interactive',
+    preset: 'solo',
     ...overrides,
   };
 }
