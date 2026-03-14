@@ -61,29 +61,46 @@
   "hooks": {
     "UserPromptSubmit": [
       {
-        "type": "command",
-        "command": "bash .hool/hooks/identity-reminder.sh"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .hool/hooks/identity-reminder.sh"
+          }
+        ]
       }
     ],
     "PostToolUse": [
       {
-        "type": "command",
-        "command": "bash .hool/hooks/metrics.sh",
-        "description": "Track tool call metrics per agent"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .hool/hooks/metrics.sh"
+          }
+        ]
       }
     ],
     "TeammateIdle": [
       {
-        "type": "command",
-        "command": "bash .hool/hooks/completion-checklist.sh",
-        "description": "Verify agent completed all required steps before going idle"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .hool/hooks/completion-checklist.sh"
+          }
+        ]
       }
     ],
     "TaskCompleted": [
       {
-        "type": "command",
-        "command": "bash .hool/hooks/governor-trigger.sh",
-        "description": "Check if governor audit is due based on task completion count"
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .hool/hooks/governor-trigger.sh"
+          }
+        ]
       }
     ]
   }
